@@ -42,7 +42,7 @@ jobs:
     name: Update RPM package definitions
     runs-on: ubuntu-24.04
     container:
-      image: ghcr.io/trento-project/continuous-delivery:add-elixir-mix-deps
+      image: ghcr.io/trento-project/continuous-delivery:pr-27
       options: -u 0:0
 
     steps:
