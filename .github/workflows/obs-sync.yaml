@@ -42,7 +42,7 @@ jobs:
     name: Update RPM package definitions
     runs-on: ubuntu-24.04
     container:
-      image: ghcr.io/trento-project/continuous-delivery:main
+      image: ghcr.io/trento-project/continuous-delivery:add-elixir-mix-deps
       options: -u 0:0
 
     steps:
@@ -83,10 +83,6 @@ jobs:
         run: |
           git config --global user.name ${{ secrets.obs_user }}
           git config --global user.email "${AUTHOR_EMAIL}"
-
-      - name: install elixir _service
-        run: |
-          zypper -n in obs-service-elixir_mix_deps
 
       - name: Checkout OBS package
         id: checkout

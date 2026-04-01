@@ -1206,7 +1206,8 @@ jobs:
   obs-sync:
     name: Update OBS packages
     if: fromJSON(vars.OBS_ENABLED) && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    uses: trento-project/.github/.github/workflows/obs-sync.yaml@b3aa163d3e0872c07ccf3755928f21c070ca0e5b # v1.1.0
+    # uses: trento-project/.github/.github/workflows/obs-sync.yaml@b3aa163d3e0872c07ccf3755928f21c070ca0e5b # v1.1.0
+    uses: ./.github/workflows/obs-sync.yaml
     # needs:
     #   - static-code-analysis-elixir
     #   - static-code-analysis-js
