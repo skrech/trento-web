@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.3.1](https://github.com/trento-project/web/tree/2.4.0/compare/4.3.0...4.3.1) - 2026-04-03
+
+### What's Changed
+
+* Test change minor (#2) @skrech
+
+**Full Changelog**: https://github.com/skrech/trento-web/compare/4.3.0...4.3.1
+
 ## [4.3.0](https://github.com/trento-project/web/tree/2.4.0/compare/3.2.0...4.3.0) - 2026-04-03
 
 ### What's Changed
@@ -364,7 +372,6 @@
 **Full Changelog**: https://github.com/trento-project/web/compare/2.5.0...3.0.0
 ## [2.5.0](https://github.com/trento-project/web/tree/2.4.0/compare/2.4.0...2.5.0) - 2025-05-20
 ### What's Changed
-
 * Test flakiness analysis for backend. (#3483) @vicenteqa
 * Fix PR env pre-flight check for forks (#3497) @stefanotorresi
 * Edit ansible inventory in CI (#3474) @balanza
@@ -596,7 +603,6 @@
 ## [2.4.0](https://github.com/trento-project/web/tree/2.4.0) (2024-11-12)
 [Full Changelog](https://github.com/trento-project/web/compare/2.3.2...2.4.0)
 **Merged pull requests:**
-
 - Add SUMA credentials e2e [#2637](https://github.com/trento-project/web/pull/2637) ([nelsonkopliku](https://github.com/nelsonkopliku))
 - Add validation tooltip on tag creation [#2696](https://github.com/trento-project/web/pull/2696) ([balanza](https://github.com/balanza))
 - Use css style on component testing [#2701](https://github.com/trento-project/web/pull/2701) ([balanza](https://github.com/balanza))
