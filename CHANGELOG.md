@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.2.0](https://github.com/trento-project/web/tree/2.4.0/compare/3.0.0...3.2.0) - 2026-04-03
+
+### What's Changed
+
+* No changes
+
+**Full Changelog**: https://github.com/skrech/trento-web/compare/...3.2.0
+
 ## [3.0.0](https://github.com/trento-project/web/tree/2.4.0/compare/2.5.0...3.0.0) - 2025-11-27
 
 ### What's Changed
@@ -344,10 +352,8 @@
 * Bump isbang/compose-action from 2.1.0 to 2.2.0 (#3264) @[dependabot[bot]](https://github.com/apps/dependabot)
 * Bump undici from 5.28.5 to 5.29.0 in /test/e2e (#3505) @[dependabot[bot]](https://github.com/apps/dependabot)
 * Bump axios from 1.7.9 to 1.9.0 in /assets (#3475) @[dependabot[bot]](https://github.com/apps/dependabot)
-
 </details>
 **Full Changelog**: https://github.com/trento-project/web/compare/2.5.0...3.0.0
-
 ## [2.5.0](https://github.com/trento-project/web/tree/2.4.0/compare/2.4.0...2.5.0) - 2025-05-20
 
 ### What's Changed
@@ -581,7 +587,6 @@
 </details>
 **Full Changelog**: https://github.com/trento-project/web/compare/2.4.0...2.5.0
 ## [2.4.0](https://github.com/trento-project/web/tree/2.4.0) (2024-11-12)
-
 [Full Changelog](https://github.com/trento-project/web/compare/2.3.2...2.4.0)
 
 **Merged pull requests:**
