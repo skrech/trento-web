@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.3.0](https://github.com/trento-project/web/tree/2.4.0/compare/3.2.0...4.3.0) - 2026-04-03
+
+### What's Changed
+
+* No changes
+
+**Full Changelog**: https://github.com/skrech/trento-web/compare/3.2.0...4.3.0
+
 ## [3.2.0](https://github.com/trento-project/web/tree/2.4.0/compare/3.0.0...3.2.0) - 2026-04-03
 
 ### What's Changed
@@ -355,7 +363,6 @@
 </details>
 **Full Changelog**: https://github.com/trento-project/web/compare/2.5.0...3.0.0
 ## [2.5.0](https://github.com/trento-project/web/tree/2.4.0/compare/2.4.0...2.5.0) - 2025-05-20
-
 ### What's Changed
 
 * Test flakiness analysis for backend. (#3483) @vicenteqa
@@ -588,7 +595,6 @@
 **Full Changelog**: https://github.com/trento-project/web/compare/2.4.0...2.5.0
 ## [2.4.0](https://github.com/trento-project/web/tree/2.4.0) (2024-11-12)
 [Full Changelog](https://github.com/trento-project/web/compare/2.3.2...2.4.0)
-
 **Merged pull requests:**
 
 - Add SUMA credentials e2e [#2637](https://github.com/trento-project/web/pull/2637) ([nelsonkopliku](https://github.com/nelsonkopliku))
