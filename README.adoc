@@ -6,7 +6,7 @@
 :docs-badge: https://img.shields.io/badge/documentation-grey.svg
 ifndef::site-gen-antora[:relfileprefix: guides/]
 
-= Trento Web
+= Trento Webo
 
 {ci-url}[image:{ci-badge}[CI]]
 {coverage-url}[image:{coverage-badge}[Coverage Status]]
