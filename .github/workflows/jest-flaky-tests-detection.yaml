@@ -1,129 +1,129 @@
-name: Jest Flaky Tests Analysis
+# name: Jest Flaky Tests Analysis
 
-on:
-  schedule:
-    - cron: "30 1 * * *" # Runs every day at 1:30 AM UTC
-  workflow_dispatch:
-    inputs:
-      num_runs:
-        description: "Number of times to run tests per Node version"
-        required: false
-        default: "50"
+# on:
+#   schedule:
+#     - cron: "30 1 * * *" # Runs every day at 1:30 AM UTC
+#   workflow_dispatch:
+#     inputs:
+#       num_runs:
+#         description: "Number of times to run tests per Node version"
+#         required: false
+#         default: "50"
 
-concurrency:
-  group: ${{ github.workflow }}
+# concurrency:
+#   group: ${{ github.workflow }}
 
-env:
-  NUM_RUNS: ${{ github.event.inputs.num_runs || 50 }}
+# env:
+#   NUM_RUNS: ${{ github.event.inputs.num_runs || 50 }}
 
-jobs:
-  setup-matrix:
-    runs-on: ubuntu-24.04
-    outputs:
-      NODEJS_BC: ${{ steps.compute-matrix.outputs.NODEJS_BC }}
-      NODEJS_DEV: ${{ steps.compute-matrix.outputs.NODEJS_DEV }}
-      run_range: ${{ steps.compute-matrix.outputs.run_range }}
-      total-runs: ${{ steps.compute-matrix.outputs.total-runs }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-      - name: gather versions
-        uses: endorama/asdf-parse-tool-versions@v1
-      - name: Compute matrix
-        id: compute-matrix
-        run: |
-          echo "NODEJS_BC=20.20.0" >> $GITHUB_OUTPUT
-          echo "NODEJS_DEV=${{ env.NODEJS_VERSION }}" >> $GITHUB_OUTPUT
-          echo "run_range=[$(seq -s, 1 ${{ env.NUM_RUNS }})]" >> $GITHUB_OUTPUT
-          echo "total-runs=${{ env.NUM_RUNS }}" >> $GITHUB_OUTPUT
+# jobs:
+#   setup-matrix:
+#     runs-on: ubuntu-24.04
+#     outputs:
+#       NODEJS_BC: ${{ steps.compute-matrix.outputs.NODEJS_BC }}
+#       NODEJS_DEV: ${{ steps.compute-matrix.outputs.NODEJS_DEV }}
+#       run_range: ${{ steps.compute-matrix.outputs.run_range }}
+#       total-runs: ${{ steps.compute-matrix.outputs.total-runs }}
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v6
+#       - name: gather versions
+#         uses: endorama/asdf-parse-tool-versions@v1
+#       - name: Compute matrix
+#         id: compute-matrix
+#         run: |
+#           echo "NODEJS_BC=20.20.0" >> $GITHUB_OUTPUT
+#           echo "NODEJS_DEV=${{ env.NODEJS_VERSION }}" >> $GITHUB_OUTPUT
+#           echo "run_range=[$(seq -s, 1 ${{ env.NUM_RUNS }})]" >> $GITHUB_OUTPUT
+#           echo "total-runs=${{ env.NUM_RUNS }}" >> $GITHUB_OUTPUT
 
-  npm-deps:
-    name: Npm dependencies
-    needs: [setup-matrix]
-    runs-on: ubuntu-24.04
-    strategy:
-      matrix:
-        include:
-          - nodejs: ${{ needs.setup-matrix.outputs.NODEJS_BC }}
-          - nodejs: ${{ needs.setup-matrix.outputs.NODEJS_DEV }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-      - name: Setup Node
-        id: setup-node
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ matrix.nodejs }}
-      - name: Retrieve NPM Cached Dependencies
-        uses: actions/cache@v5
-        id: npm-cache
-        with:
-          path: |
-            assets/node_modules
-          key: nodejs-${{ steps.setup-node.outputs.node-version }}-${{ hashFiles('assets/package-lock.json') }}
-      - name: Install NPM dependencies
-        if: steps.npm-cache.outputs.cache-hit != 'true'
-        run: cd assets && npm ci
+#   npm-deps:
+#     name: Npm dependencies
+#     needs: [setup-matrix]
+#     runs-on: ubuntu-24.04
+#     strategy:
+#       matrix:
+#         include:
+#           - nodejs: ${{ needs.setup-matrix.outputs.NODEJS_BC }}
+#           - nodejs: ${{ needs.setup-matrix.outputs.NODEJS_DEV }}
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v6
+#         with:
+#           fetch-depth: 0
+#       - name: Setup Node
+#         id: setup-node
+#         uses: actions/setup-node@v6
+#         with:
+#           node-version: ${{ matrix.nodejs }}
+#       - name: Retrieve NPM Cached Dependencies
+#         uses: actions/cache@v5
+#         id: npm-cache
+#         with:
+#           path: |
+#             assets/node_modules
+#           key: nodejs-${{ steps.setup-node.outputs.node-version }}-${{ hashFiles('assets/package-lock.json') }}
+#       - name: Install NPM dependencies
+#         if: steps.npm-cache.outputs.cache-hit != 'true'
+#         run: cd assets && npm ci
 
-  test-javascript:
-    name: Javascript tests (Node ${{ matrix.nodejs }}, Run ${{ matrix.run }})
-    needs: [setup-matrix, npm-deps]
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        run: ${{ fromJson(needs.setup-matrix.outputs.run_range) }}
-        nodejs:
-          - ${{ needs.setup-matrix.outputs.NODEJS_BC }}
-          - ${{ needs.setup-matrix.outputs.NODEJS_DEV }}
-    timeout-minutes: 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-      - name: Setup Node
-        id: setup-node
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ matrix.nodejs }}
-      - name: Retrieve NPM Cached Dependencies
-        uses: actions/cache@v5
-        id: npm-cache
-        with:
-          path: |
-            assets/node_modules
-          key: nodejs-${{ steps.setup-node.outputs.node-version }}-${{ hashFiles('assets/package-lock.json') }}
-      - name: Set ENV_TS to get current Timestamp for JUnit reports
-        run: echo "ENV_TS=$(date +%F_%T | sed 's/:/-/g')" >> $GITHUB_ENV
-      - name: Run JS tests
-        run: cd assets && npm test
-        env:
-          JEST_JUNIT_OUTPUT_DIR: /tmp
-          JEST_JUNIT_OUTPUT_NAME: jest-junit-node${{ matrix.nodejs }}-run${{ matrix.run }}-${{ env.ENV_TS }}.xml
-      - name: Upload jest test junit reports
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: jest-junit-reports-node${{ matrix.nodejs }}-run${{ matrix.run }}
-          path: /tmp/*.xml
-          retention-days: 1
+#   test-javascript:
+#     name: Javascript tests (Node ${{ matrix.nodejs }}, Run ${{ matrix.run }})
+#     needs: [setup-matrix, npm-deps]
+#     runs-on: ubuntu-24.04
+#     strategy:
+#       fail-fast: false
+#       matrix:
+#         run: ${{ fromJson(needs.setup-matrix.outputs.run_range) }}
+#         nodejs:
+#           - ${{ needs.setup-matrix.outputs.NODEJS_BC }}
+#           - ${{ needs.setup-matrix.outputs.NODEJS_DEV }}
+#     timeout-minutes: 10
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v6
+#         with:
+#           fetch-depth: 0
+#       - name: Setup Node
+#         id: setup-node
+#         uses: actions/setup-node@v6
+#         with:
+#           node-version: ${{ matrix.nodejs }}
+#       - name: Retrieve NPM Cached Dependencies
+#         uses: actions/cache@v5
+#         id: npm-cache
+#         with:
+#           path: |
+#             assets/node_modules
+#           key: nodejs-${{ steps.setup-node.outputs.node-version }}-${{ hashFiles('assets/package-lock.json') }}
+#       - name: Set ENV_TS to get current Timestamp for JUnit reports
+#         run: echo "ENV_TS=$(date +%F_%T | sed 's/:/-/g')" >> $GITHUB_ENV
+#       - name: Run JS tests
+#         run: cd assets && npm test
+#         env:
+#           JEST_JUNIT_OUTPUT_DIR: /tmp
+#           JEST_JUNIT_OUTPUT_NAME: jest-junit-node${{ matrix.nodejs }}-run${{ matrix.run }}-${{ env.ENV_TS }}.xml
+#       - name: Upload jest test junit reports
+#         if: always()
+#         uses: actions/upload-artifact@v7
+#         with:
+#           name: jest-junit-reports-node${{ matrix.nodejs }}-run${{ matrix.run }}
+#           path: /tmp/*.xml
+#           retention-days: 1
 
-  flaky-tests-analysis:
-    needs: [setup-matrix, test-javascript]
-    if: ${{ !cancelled() }}
-    strategy:
-      max-parallel: 1
-      matrix:
-        include:
-          - suite-name: "Jest — Node ${{ needs.setup-matrix.outputs.NODEJS_DEV }}"
-            junit-artifact-pattern: jest-junit-reports-node${{ needs.setup-matrix.outputs.NODEJS_DEV }}-*
-          - suite-name: "Jest — Node ${{ needs.setup-matrix.outputs.NODEJS_BC }}"
-            junit-artifact-pattern: jest-junit-reports-node${{ needs.setup-matrix.outputs.NODEJS_BC }}-*
-    uses: ./.github/workflows/flaky-tests-analysis.yaml
-    with:
-      suite-name: ${{ matrix.suite-name }}
-      junit-artifact-pattern: ${{ matrix.junit-artifact-pattern }}
-      total-runs: ${{ needs.setup-matrix.outputs.total-runs }}
+#   flaky-tests-analysis:
+#     needs: [setup-matrix, test-javascript]
+#     if: ${{ !cancelled() }}
+#     strategy:
+#       max-parallel: 1
+#       matrix:
+#         include:
+#           - suite-name: "Jest — Node ${{ needs.setup-matrix.outputs.NODEJS_DEV }}"
+#             junit-artifact-pattern: jest-junit-reports-node${{ needs.setup-matrix.outputs.NODEJS_DEV }}-*
+#           - suite-name: "Jest — Node ${{ needs.setup-matrix.outputs.NODEJS_BC }}"
+#             junit-artifact-pattern: jest-junit-reports-node${{ needs.setup-matrix.outputs.NODEJS_BC }}-*
+#     uses: ./.github/workflows/flaky-tests-analysis.yaml
+#     with:
+#       suite-name: ${{ matrix.suite-name }}
+#       junit-artifact-pattern: ${{ matrix.junit-artifact-pattern }}
+#       total-runs: ${{ needs.setup-matrix.outputs.total-runs }}
