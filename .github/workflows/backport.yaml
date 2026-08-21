@@ -59,8 +59,7 @@ jobs:
           experimental: '{"conflict_resolution": "draft_commit_conflicts"}'
 
       - name: Add label to source PR
-        if: >-
-          fromJSON(steps.backport.was_successful)
+        if: fromJSON(steps.backport.outputs.was_successful)
         env:
           GH_TOKEN: ${{ secrets.TRENTOBOT_GH_PAT }}
-        run: gh pr edit "${{ github.event.pull_request.number }}" --add-label "released-as-hotfix"
+        run: gh pr edit ${{ github.event.pull_request.number }} --add-label released-as-hotfix
