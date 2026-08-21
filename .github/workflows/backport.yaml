@@ -55,16 +55,11 @@ jobs:
           git_committer_name: ${{ steps.import-gpg.outputs.name }}
           git_committer_email: ${{ steps.import-gpg.outputs.email }}
           pull_title: '${pull_title}'
-          conflict_resolution: 'draft_commit_conflicts'
           github_token: ${{ secrets.TRENTOBOT_GH_PAT }}
+          experimental: '{"conflict_resolution": "draft_commit_conflicts"}'
 
       - name: Add label to source PR
-<<<<<<< HEAD
-        if: >-
-          steps.backport.was_successful
-=======
         if: fromJSON(steps.backport.outputs.was_successful)
->>>>>>> cca844b (Really last fix (#9))
         env:
           GH_TOKEN: ${{ secrets.TRENTOBOT_GH_PAT }}
         run: gh pr edit ${{ github.event.pull_request.number }} --add-label released-as-hotfix
