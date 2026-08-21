@@ -31,8 +31,8 @@ jobs:
     runs-on: ubuntu-24.04
     if: >
       github.event.pull_request.merged && (
-        (github.event.action == 'closed' && contains(github.event.pull_request.labels.*.name, ${{ env.COMMAND_LABEL }})) ||
-        (github.event.action == 'labeled' && github.event.label.name == ${{ env.COMMAND_LABEL }} && !contains(github.event.pull_request.labels.*.name, ${{ env.PROTECT_LABEL }}))
+        (github.event.action == 'closed' && contains(github.event.pull_request.labels.*.name, env.COMMAND_LABEL)) ||
+        (github.event.action == 'labeled' && github.event.label.name == env.COMMAND_LABEL && !contains(github.event.pull_request.labels.*.name, env.PROTECT_LABEL))
       )
     steps:
       - name: Check out the repository
