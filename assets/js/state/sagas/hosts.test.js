@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import MockAdapter from 'axios-mock-adapter';
 
 import { recordSaga } from '@lib/test-utils';
@@ -181,7 +184,7 @@ describe('Hosts sagas', () => {
     ]);
   });
 
-  it('should fetch SUMA settings and software updates when host software updates discovery is completed', async () => {
+  it('should fetch SUSE Multi-Linux Manager settings and software updates when host software updates discovery is completed', async () => {
     const { id } = hostFactory.build();
 
     const settingsResponse = softwareUpdatesSettingsFactory.build();

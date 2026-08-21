@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import { calculateFilesystemUsage } from './dataMapper';
 import {
   filesystemFactory,
@@ -6,8 +9,16 @@ import {
 
 describe('dataMapper', () => {
   it('should correctly calculate filesystem and swap usage', () => {
-    const commonRootMetric = { mountpoint: '/', device: '/dev/sda1' };
-    const commonDataMetric = { mountpoint: '/data', device: '/dev/sdb1' };
+    const commonRootMetric = {
+      mountpoint: '/',
+      device: '/dev/sda1',
+      fstype: 'xfs',
+    };
+    const commonDataMetric = {
+      mountpoint: '/data',
+      device: '/dev/sdb1',
+      fstype: 'xfs',
+    };
 
     const filesystems_size = [
       filesystemFactory.build({
@@ -45,12 +56,14 @@ describe('dataMapper', () => {
       mountpoints: {
         '/': {
           device: '/dev/sda1',
+          fsType: 'xfs',
           totalBytes: 1000,
           availBytes: 500,
           usedBytes: 500,
         },
         '/data': {
           device: '/dev/sdb1',
+          fsType: 'xfs',
           totalBytes: 2000,
           availBytes: 1000,
           usedBytes: 1000,
@@ -65,7 +78,7 @@ describe('dataMapper', () => {
   });
 
   it('should return null for swap when swap data is not available', () => {
-    const metric = { mountpoint: '/', device: '/dev/sda1' };
+    const metric = { mountpoint: '/', device: '/dev/sda1', fstype: 'xfs' };
     const filesystems_size = [
       filesystemFactory.build({
         metric,
@@ -88,6 +101,7 @@ describe('dataMapper', () => {
     expect(result.mountpoints).toEqual({
       '/': {
         device: '/dev/sda1',
+        fsType: 'xfs',
         totalBytes: 1000,
         availBytes: 500,
         usedBytes: 500,

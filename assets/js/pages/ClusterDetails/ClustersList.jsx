@@ -1,16 +1,23 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useSearchParams } from 'react-router';
+import classNames from 'classnames';
 
 import { post, del } from '@lib/network';
+import { STALE_ROW } from '@lib/tables';
 import {
+  ASCS_ERS,
   HANA_ASCS_ERS,
   getClusterTypeLabel,
   getClusterSids,
 } from '@lib/model/clusters';
+import { APPLICATION_TYPE, DATABASE_TYPE } from '@lib/model/sapSystems';
 
 import { addTagToCluster, removeTagFromCluster } from '@state/clusters';
-import { getAllSAPInstances } from '@state/selectors/sapSystem';
+import { getClustersWithEnrichedSapInstances } from '@state/selectors/cluster';
 import { getInstanceID } from '@state/instances';
 
 import { getUserProfile } from '@state/selectors/user';
@@ -30,6 +37,19 @@ import ClusterLink from './ClusterLink';
 const getSapSystemBySID = (instances, sid) =>
   instances.find((instance) => instance.sid === sid);
 
+// getSapSystemType gets the current SAP system type
+// evaluating the cluster type.
+const getSapSystemType = (clusterType) => {
+  switch (clusterType) {
+    case ASCS_ERS:
+      return APPLICATION_TYPE;
+    case HANA_ASCS_ERS:
+      return null;
+    default:
+      return DATABASE_TYPE;
+  }
+};
+
 const addTag = (tag, clusterId) => {
   post(`/clusters/${clusterId}/tags`, {
     value: tag,
@@ -41,24 +61,32 @@ const removeTag = (tag, clusterId) => {
 };
 
 function ClustersList() {
-  const clusters = useSelector((state) => state.clustersList.clusters);
-  const allInstances = useSelector(getAllSAPInstances);
+  const clusters = useSelector(getClustersWithEnrichedSapInstances);
   const dispatch = useDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { abilities } = useSelector(getUserProfile);
+  const { abilities, timezone: userTimezone } = useSelector(getUserProfile);
 
   const config = {
     pagination: true,
     usePadding: false,
+    rowClassName: ({ staleAt }) =>
+      classNames({
+        [STALE_ROW]: !!staleAt,
+      }),
     columns: [
       {
         title: 'Health',
         key: 'health',
         filter: true,
         filterFromParams: true,
-        render: (health, { checks_execution: checksExecution }) => (
+        render: (health, { checks_execution: checksExecution, staleAt }) => (
           <div className="ml-4">
-            <ExecutionIcon health={health} executionState={checksExecution} />
+            <ExecutionIcon
+              health={health}
+              executionState={checksExecution}
+              staleAt={staleAt}
+              timezone={userTimezone}
+            />
           </div>
         ),
       },
@@ -79,14 +107,19 @@ function ClustersList() {
         filterFromParams: true,
         filter: (filter, key) => (element) =>
           element[key].some((sid) => filter.includes(sid)),
-        render: (_, { sid }) => {
+        render: (
+          _,
+          { sid, type: clusterType, sap_instances: sapInstances }
+        ) => {
           const sidsArray = sid.map((singleSid) => {
-            const sapSystemData = getSapSystemBySID(allInstances, singleSid);
+            const sapSystemData = getSapSystemBySID(sapInstances, singleSid);
 
             return (
               <span key={singleSid}>
                 <SapSystemLink
-                  systemType={sapSystemData?.type}
+                  systemType={
+                    sapSystemData?.type ?? getSapSystemType(clusterType)
+                  }
                   sapSystemId={getInstanceID(sapSystemData)}
                 >
                   {singleSid}
@@ -163,12 +196,14 @@ function ClustersList() {
     name: cluster.name,
     id: cluster.id,
     sid: getClusterSids(cluster),
+    sap_instances: cluster.sap_instances || [],
     type: cluster.type,
     hosts_number: cluster.hosts_number,
     resources_number: cluster.resources_number,
     checks_execution: cluster.checks_execution,
     selected_checks: cluster.selected_checks,
     tags: (cluster.tags && cluster.tags.map((tag) => tag.value)) || [],
+    staleAt: cluster.stale_at,
   }));
 
   const counters = getCounters(data || []);

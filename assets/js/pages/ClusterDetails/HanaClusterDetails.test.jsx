@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -413,5 +416,36 @@ describe('HanaClusterDetails component', () => {
     // The important part is that the status from the host is ignored,
     // as we consider the one from the cluster more reliable (it's coming from the DC node)
     expect(container.querySelectorAll('.tn-online')).toHaveLength(hosts.length);
+  });
+
+  it('should format CIB last written using provided timezone', () => {
+    const {
+      clusterID,
+      type: clusterType,
+      sap_instances: [{ sid }],
+      provider,
+      details,
+    } = clusterFactory.build({ cib_last_written: '2024-01-10T23:30:00Z' });
+
+    const hosts = hostFactory.buildList(2, { cluster_id: clusterID });
+
+    renderWithRouter(
+      <HanaClusterDetails
+        clusterID={clusterID}
+        hosts={hosts}
+        clusterType={clusterType}
+        cibLastWritten="2024-01-10T23:30:00Z"
+        clusterSids={[sid]}
+        provider={provider}
+        sapSystems={[]}
+        details={details}
+        timezone="Pacific/Kiritimati"
+        lastExecution={null}
+      />
+    );
+
+    expect(screen.getByText('CIB last written').nextSibling).toHaveTextContent(
+      '11 Jan 2024, 13:30:00'
+    );
   });
 });

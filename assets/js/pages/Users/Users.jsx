@@ -1,9 +1,12 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useState } from 'react';
 import { Link } from 'react-router';
 import { noop } from 'lodash';
-import { format, parseISO } from 'date-fns';
 
 import { isAdmin } from '@lib/model/users';
+import { formatDateOnly } from '@lib/timezones';
 
 import Banner from '@common/Banners';
 import Button from '@common/Button';
@@ -20,6 +23,7 @@ function Users({
   users = defaultUsers,
   loading = false,
   singleSignOnEnabled = false,
+  timezone,
 }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [user, setUser] = useState(null);
@@ -31,6 +35,7 @@ function Users({
       {
         title: 'Username',
         key: 'username',
+        className: 'ph-mask',
         render: (content, item) => (
           <Link
             className="text-jungle-green-500 hover:opacity-75"
@@ -59,7 +64,7 @@ function Users({
         title: 'Created',
         key: 'created_at',
         render: (content, item) => (
-          <span>{format(parseISO(item.created_at), 'MMMM dd, yyyy')}</span>
+          <span>{formatDateOnly(item.created_at, timezone)}</span>
         ),
       },
       ...(!singleSignOnEnabled
@@ -68,9 +73,7 @@ function Users({
               title: 'Last Login',
               key: 'last_login_at',
               render: (content) => (
-                <span>
-                  {content ? format(parseISO(content), 'MMMM dd, yyyy') : '-'}
-                </span>
+                <span>{content ? formatDateOnly(content, timezone) : '-'}</span>
               ),
             },
           ]

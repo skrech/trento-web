@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Clusters.PolicyTest do
   use ExUnit.Case
 
@@ -60,6 +63,12 @@ defmodule Trento.Clusters.PolicyTest do
         assert Policy.authorize(@operation, user, ClusterReadModel)
       end
 
+      test "should allow #{@operation} operation if the user has operation:all ability" do
+        user = %User{abilities: [%Ability{name: "operation", resource: "all"}]}
+
+        assert Policy.authorize(@operation, user, ClusterReadModel)
+      end
+
       test "should disallow #{@operation} operation if the user does not have #{@ability}:cluster ability" do
         user = %User{abilities: [%Ability{name: "all", resource: "other_resource"}]}
 
@@ -80,6 +89,12 @@ defmodule Trento.Clusters.PolicyTest do
 
       test "should allow #{operation} operation if the user has all:all ability" do
         user = %User{abilities: [%Ability{name: "all", resource: "all"}]}
+
+        assert Policy.authorize(@operation, user, ClusterReadModel)
+      end
+
+      test "should allow #{operation} operation if the user has operation:all ability" do
+        user = %User{abilities: [%Ability{name: "operation", resource: "all"}]}
 
         assert Policy.authorize(@operation, user, ClusterReadModel)
       end

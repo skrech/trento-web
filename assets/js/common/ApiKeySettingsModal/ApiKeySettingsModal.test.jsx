@@ -1,5 +1,8 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { faker } from '@faker-js/faker';
 import {
@@ -21,7 +24,7 @@ describe('ApiKeySettingsModal', () => {
   describe('Generation form', () => {
     it('render the generation form', async () => {
       const user = userEvent.setup();
-      render(<ApiKeySettingsModal open />);
+      await act(() => render(<ApiKeySettingsModal open />));
 
       expect(screen.getByText('Never Expires')).toBeVisible();
       expect(screen.getByText('Key Expiration')).toBeVisible();
@@ -34,9 +37,11 @@ describe('ApiKeySettingsModal', () => {
       expect(screen.getByRole('spinbutton')).toBeVisible();
       expect(screen.getByRole('button', { name: 'Generate' })).toBeVisible();
       expect(screen.getByRole('button', { name: 'Close' })).toBeVisible();
-      expect(screen.getByRole('button', { name: 'months' })).toBeVisible();
+      expect(screen.getByText('months')).toBeVisible();
 
-      await user.click(screen.getByRole('button', { name: 'months' }));
+      await user.click(
+        screen.getByRole('combobox', { name: 'key-expiration-time' })
+      );
 
       expect(screen.getByRole('listbox')).toBeVisible();
       expect(screen.getAllByRole('option')).toHaveLength(3);
@@ -50,7 +55,7 @@ describe('ApiKeySettingsModal', () => {
     it('should show a validation error when quantity is 0 and the form is enabled', async () => {
       const user = userEvent.setup();
 
-      render(<ApiKeySettingsModal open />);
+      await act(() => render(<ApiKeySettingsModal open />));
 
       await user.type(screen.getByRole('spinbutton'), '0');
 
@@ -64,7 +69,7 @@ describe('ApiKeySettingsModal', () => {
     it('should not show a validation error when quantity is > 0 and the form is enabled', async () => {
       const user = userEvent.setup();
 
-      render(<ApiKeySettingsModal open />);
+      await act(() => render(<ApiKeySettingsModal open />));
 
       await user.type(screen.getByRole('spinbutton'), '20');
 
@@ -79,13 +84,16 @@ describe('ApiKeySettingsModal', () => {
       const user = userEvent.setup();
       const onGenerate = jest.fn();
 
-      render(<ApiKeySettingsModal open onGenerate={onGenerate} />);
+      await act(() =>
+        render(<ApiKeySettingsModal open onGenerate={onGenerate} />)
+      );
 
       await user.type(screen.getByRole('spinbutton'), '20');
 
-      await user.click(
-        await waitFor(() => screen.getByRole('button', { name: 'Generate' }))
-      );
+      const generateBtn = await screen.findByRole('button', {
+        name: 'Generate',
+      });
+      await user.click(generateBtn);
 
       await user.click(screen.getByRole('button', { name: 'Generate' }));
 
@@ -110,12 +118,15 @@ describe('ApiKeySettingsModal', () => {
       const user = userEvent.setup();
       const onGenerate = jest.fn();
 
-      render(<ApiKeySettingsModal open onGenerate={onGenerate} />);
+      await act(() =>
+        render(<ApiKeySettingsModal open onGenerate={onGenerate} />)
+      );
 
       await user.type(screen.getByRole('spinbutton'), '2');
 
-      // months are default click on the select to show all the details
-      await user.click(screen.getByRole('button', { name: 'months' }));
+      await user.click(
+        screen.getByRole('combobox', { name: 'key-expiration-time' })
+      );
 
       await user.click(screen.getByRole('option', { name: 'years' }));
 
@@ -144,12 +155,15 @@ describe('ApiKeySettingsModal', () => {
       const user = userEvent.setup();
       const onGenerate = jest.fn();
 
-      render(<ApiKeySettingsModal open onGenerate={onGenerate} />);
+      await act(() =>
+        render(<ApiKeySettingsModal open onGenerate={onGenerate} />)
+      );
 
       await user.type(screen.getByRole('spinbutton'), '20');
 
-      // months are default click on the select to show all the details
-      await user.click(screen.getByRole('button', { name: 'months' }));
+      await user.click(
+        screen.getByRole('combobox', { name: 'key-expiration-time' })
+      );
 
       await user.click(screen.getByRole('option', { name: 'days' }));
 
@@ -175,27 +189,31 @@ describe('ApiKeySettingsModal', () => {
     });
 
     it('should have generate button disabled when the modal has loading prop set to true', async () => {
-      render(<ApiKeySettingsModal open loading />);
+      await act(() => render(<ApiKeySettingsModal open loading />));
       expect(screen.getByRole('button', { name: 'Generate' })).toBeDisabled();
     });
 
     it('should have the form inputs disabled when the generation if form is disabled by the user', async () => {
       const user = userEvent.setup();
 
-      render(<ApiKeySettingsModal open />);
+      await act(() => render(<ApiKeySettingsModal open />));
 
       await user.click(screen.getByRole('switch'));
 
       expect(screen.getByRole('spinbutton')).toBeDisabled();
 
-      expect(screen.getByRole('button', { name: 'months' })).toBeDisabled();
+      expect(
+        screen.getByRole('combobox', { name: 'key-expiration-time' })
+      ).toBeDisabled();
     });
 
     it('should return on onGenerate null expiration date when the generation form is disabled by the user', async () => {
       const user = userEvent.setup();
       const onGenerate = jest.fn();
 
-      render(<ApiKeySettingsModal open onGenerate={onGenerate} />);
+      await act(() =>
+        render(<ApiKeySettingsModal open onGenerate={onGenerate} />)
+      );
 
       await user.click(screen.getByRole('switch'));
 
@@ -210,13 +228,16 @@ describe('ApiKeySettingsModal', () => {
       const user = userEvent.setup();
       const apiKey = faker.string.alpha({ length: { min: 100, max: 100 } });
       const nowISO = new Date().toISOString();
+      jest.spyOn(window, 'prompt').mockReturnValue();
 
-      render(
-        <ApiKeySettingsModal
-          open
-          generatedApiKey={apiKey}
-          generatedApiKeyExpiration={nowISO}
-        />
+      await act(() =>
+        render(
+          <ApiKeySettingsModal
+            open
+            generatedApiKey={apiKey}
+            generatedApiKeyExpiration={nowISO}
+          />
+        )
       );
 
       await user.click(screen.getByRole('switch'));
@@ -228,6 +249,7 @@ describe('ApiKeySettingsModal', () => {
         screen.getByRole('button', { name: 'copy to clipboard' })
       );
 
+      expect(window.prompt).toHaveBeenCalledWith(expect.anything(), apiKey);
       expect(screen.getByText(apiKey)).toBeVisible();
     });
   });
@@ -238,12 +260,14 @@ describe('ApiKeySettingsModal', () => {
       const apiKey = faker.string.alpha({ length: { min: 100, max: 100 } });
       const nowISO = new Date().toISOString();
 
-      render(
-        <ApiKeySettingsModal
-          open
-          generatedApiKey={apiKey}
-          generatedApiKeyExpiration={nowISO}
-        />
+      await act(() =>
+        render(
+          <ApiKeySettingsModal
+            open
+            generatedApiKey={apiKey}
+            generatedApiKeyExpiration={nowISO}
+          />
+        )
       );
 
       await user.click(screen.getByRole('switch'));
@@ -252,7 +276,9 @@ describe('ApiKeySettingsModal', () => {
       expect(
         screen.getByText('Are you sure you want to generate a new API key?')
       ).toBeVisible();
-      expect(screen.getByTestId('banner')).toBeVisible();
+      expect(
+        screen.getByRole('alert', { name: /Generating a new API Key forces/i })
+      ).toBeVisible();
       expect(screen.getByRole('button', { name: 'Generate' })).toBeVisible();
       expect(screen.getByRole('button', { name: 'Cancel' })).toBeVisible();
     });
@@ -262,12 +288,14 @@ describe('ApiKeySettingsModal', () => {
       const apiKey = faker.string.alpha({ length: { min: 100, max: 100 } });
       const nowISO = new Date().toISOString();
 
-      render(
-        <ApiKeySettingsModal
-          open
-          generatedApiKey={apiKey}
-          generatedApiKeyExpiration={nowISO}
-        />
+      await act(() =>
+        render(
+          <ApiKeySettingsModal
+            open
+            generatedApiKey={apiKey}
+            generatedApiKeyExpiration={nowISO}
+          />
+        )
       );
 
       await user.click(screen.getByRole('switch'));
@@ -283,13 +311,15 @@ describe('ApiKeySettingsModal', () => {
       const nowISO = new Date().toISOString();
       const onGenerate = jest.fn();
 
-      render(
-        <ApiKeySettingsModal
-          open
-          generatedApiKey={apiKey}
-          generatedApiKeyExpiration={nowISO}
-          onGenerate={onGenerate}
-        />
+      await act(() =>
+        render(
+          <ApiKeySettingsModal
+            open
+            generatedApiKey={apiKey}
+            generatedApiKeyExpiration={nowISO}
+            onGenerate={onGenerate}
+          />
+        )
       );
 
       await user.click(screen.getByRole('switch'));

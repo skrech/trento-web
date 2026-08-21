@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule TrentoWeb.Gettext do
   @moduledoc """
   A module providing Internationalization with a gettext-based API.
@@ -20,5 +23,5 @@ defmodule TrentoWeb.Gettext do
 
   See the [Gettext Docs](https://hexdocs.pm/gettext) for detailed usage.
   """
-  use Gettext, otp_app: :trento
+  use Gettext.Backend, otp_app: :trento
 end

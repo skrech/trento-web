@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 import { faker } from '@faker-js/faker';
 import { render, screen } from '@testing-library/react';
@@ -14,9 +17,11 @@ const types = [
   'danger-bold',
   'link',
   'primary-white-fit',
+  'icon',
+  'fab',
 ];
 
-const sizes = ['small', 'fit'];
+const sizes = ['small', 'fit', 'none'];
 
 describe('Button', () => {
   it('should display a default button with its text', () => {

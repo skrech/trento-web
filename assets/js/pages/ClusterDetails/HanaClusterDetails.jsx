@@ -1,10 +1,16 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 import { get, capitalize, sortBy, noop } from 'lodash';
+
+import { DATABASE_TYPE } from '@lib/model/sapSystems';
 
 import ListView from '@common/ListView';
 import ProviderLabel from '@common/ProviderLabel';
 import ClusterTypeLabel from '@common/ClusterTypeLabel';
 import SapSystemLink from '@common/SapSystemLink';
+import { formatDateTime } from '@lib/timezones';
 
 import CheckResultsOverview from '@pages/CheckResultsOverview';
 
@@ -38,6 +44,7 @@ function HanaClusterDetails({
   catalog,
   lastExecution,
   userAbilities,
+  timezone,
   navigate = noop,
   getClusterHostOperations = noop,
 }) {
@@ -80,7 +87,10 @@ function HanaClusterDetails({
                   <div>
                     {content.map(({ id, sid: sapSystemSid }) => (
                       <span key={sapSystemSid}>
-                        <SapSystemLink sapSystemId={id} systemType="databases">
+                        <SapSystemLink
+                          sapSystemId={id}
+                          systemType={DATABASE_TYPE}
+                        >
                           {sapSystemSid}
                         </SapSystemLink>{' '}
                       </span>
@@ -109,7 +119,9 @@ function HanaClusterDetails({
               },
               {
                 title: 'CIB last written',
-                content: cibLastWritten || '-',
+                content: cibLastWritten
+                  ? formatDateTime(cibLastWritten, timezone)
+                  : '-',
               },
               {
                 title: 'HANA log replication mode',
@@ -130,6 +142,7 @@ function HanaClusterDetails({
           <CheckResultsOverview
             data={executionData}
             catalogDataEmpty={catalogData?.length === 0}
+            timezone={timezone}
             loading={catalogLoading || executionLoading}
             error={catalogError || executionError}
             onCheckClick={(health) =>

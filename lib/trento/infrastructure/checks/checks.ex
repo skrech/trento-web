@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Infrastructure.Checks do
   @moduledoc """
   Checks Engine service integration
@@ -15,6 +18,8 @@ defmodule Trento.Infrastructure.Checks do
     ExecutionRequested,
     Target
   }
+
+  alias Google.Protobuf.Value, as: ProtobufValue
 
   alias Trento.Infrastructure.Checks.{
     ClusterExecutionEnv,
@@ -50,8 +55,12 @@ defmodule Trento.Infrastructure.Checks do
       targets:
         Enum.map(
           targets,
-          fn %{host_id: host_id} ->
-            %Target{agent_id: host_id, checks: selected_checks}
+          fn target ->
+            %Target{
+              agent_id: target.host_id,
+              checks: selected_checks,
+              attributes: build_target_attributes(target)
+            }
           end
         ),
       env: build_env(env),
@@ -97,6 +106,12 @@ defmodule Trento.Infrastructure.Checks do
   defp dispatch_completion_command(execution_id, command) do
     commanded().dispatch(command, correlation_id: execution_id)
   end
+
+  defp build_target_attributes(%{is_majority_maker: is_majority_maker}) do
+    %{"is_majority_maker" => %ProtobufValue{kind: {:bool_value, is_majority_maker}}}
+  end
+
+  defp build_target_attributes(_), do: %{}
 
   defp build_env(%ClusterExecutionEnv{
          cluster_type: ClusterType.ascs_ers(),

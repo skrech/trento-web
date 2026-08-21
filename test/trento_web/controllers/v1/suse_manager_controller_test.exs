@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule TrentoWeb.V1.SUSEManagerControllerTest do
   use TrentoWeb.ConnCase, async: true
   use Trento.SoftwareUpdates.DiscoveryCase
@@ -69,7 +72,10 @@ defmodule TrentoWeb.V1.SUSEManagerControllerTest do
 
       assert %{
                "errors" => [
-                 %{"detail" => "SUSE Manager settings not configured.", "title" => "Not Found"}
+                 %{
+                   "detail" => "SUSE Multi-Linux Manager settings not configured.",
+                   "title" => "Not Found"
+                 }
                ]
              } == resp
     end

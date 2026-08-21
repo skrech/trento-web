@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import { del, get, patch, post } from '@lib/network';
 
 export const listUsers = () => get('/users');
@@ -34,3 +37,11 @@ export const generatePersonalAccessToken = (name, expiresAt) =>
 
 export const deletePersonalAccessToken = (tokenID) =>
   del(`/profile/tokens/${tokenID}`);
+
+export const createAIConfiguration = (provider, model, apiKey) =>
+  post('/profile/ai_configuration', { provider, model, api_key: apiKey });
+
+export const editAIConfiguration = (provider, model, apiKey) =>
+  patch('/profile/ai_configuration', { provider, model, api_key: apiKey });
+
+export const clearAIConfiguration = () => del('/profile/ai_configuration');

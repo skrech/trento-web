@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 /* This page object handles alerting functionality.
 It was created to keep alerting logic separate from other concerns, even though there is no dedicated "Alerting" page in the UI.*/
 
@@ -14,8 +17,13 @@ const alertingDevEnvSettings = {
   recipientEmail: 'admin@trento-project.io',
 };
 
-export const apiSetDevEnvAlertingSettings = (method = 'POST') => {
-  basePage.apiLogin().then(({ accessToken }) => {
+const testHost = {
+  id: '9cd46919-5f19-59aa-993e-cf3736c71053',
+  hostname: 'vmhdbprd01',
+};
+
+export const apiSetDevEnvAlertingSettings = (method = 'POST') =>
+  basePage.apiLogin().then(({ accessToken }) =>
     cy.request({
       url: '/api/v1/settings/alerting',
       method: method,
@@ -31,24 +39,28 @@ export const apiSetDevEnvAlertingSettings = (method = 'POST') => {
         sender_email: alertingDevEnvSettings.senderEmail,
         recipient_email: alertingDevEnvSettings.recipientEmail,
       },
-    });
-  });
+    })
+  );
+
+export const emailIsReceived = (type) =>
+  cy
+    .task('searchEmailInMailpit', `Trento Alert: ${type}`)
+    .then((result) => cy.wrap(result.length).should('equal', 1));
+
+export const heartbeatFailedEmailIsReceived = () =>
+  emailIsReceived(`Host ${testHost.hostname} stopped reporting`);
+
+export const triggerHeartbeatFailedAlertingEmail = () => {
+  basePage.startAgentsHeartbeat([testHost.id]);
+  return basePage.stopAgentsHeartbeat();
 };
 
-export const emailIsReceived = (type) => {
-  cy.task('searchEmailInMailpit', `Trento Alert: ${type}`).then((result) => {
-    cy.wrap(result.length).should('equal', 1);
-  });
-};
-
-export const triggerHostAlertingEmail = () => {
-  cy.task('startAgentHeartbeat', ['9cd46919-5f19-59aa-993e-cf3736c71053']);
-  basePage.stopAgentsHeartbeat();
-};
+export const triggerHostAlertingEmail = () =>
+  basePage.loadScenario('host-vmhdbprd01-saptune-not-compliant');
 
 export const triggerClusterAlertingEmail = () => {
   basePage.loadScenario('cluster-unnamed');
-  basePage.loadScenario('cluster-1-SOK');
+  return basePage.loadScenario('cluster-1-SOK');
 };
 
 export const triggerSapSystemAlertingEmail = () =>
@@ -57,5 +69,6 @@ export const triggerSapSystemAlertingEmail = () =>
 export const triggerDatabaseAlertingEmail = () =>
   basePage.loadScenario('hana-database-detail-RED');
 
-export const deleteAllEmailsFromMailpit = () =>
-  cy.task('deleteAllEmailsFromMailpit');
+export const deleteAllEmailsFromMailpit = () => {
+  if (Cypress.expose('ALERTING_TESTS')) cy.task('deleteAllEmailsFromMailpit');
+};

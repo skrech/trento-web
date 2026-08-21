@@ -1,7 +1,10 @@
-import React from 'react';
-import { MemoryRouter } from 'react-router';
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
 
 import { healthSummaryFactory } from '@lib/test-utils/factories';
+import React from 'react';
+import { MemoryRouter } from 'react-router';
+import { faker } from '@faker-js/faker';
 
 import HomeHealthSummary from './HomeHealthSummary';
 
@@ -9,6 +12,7 @@ const randomSummary = healthSummaryFactory.buildList(3);
 const healthySummary = healthSummaryFactory.buildList(3, {
   application_cluster_health: 'passing',
   database_cluster_health: 'passing',
+  application_health: 'passing',
   database_health: 'passing',
   hosts_health: 'passing',
   sapsystem_health: 'passing',
@@ -18,9 +22,17 @@ const unClusteredSummary = healthSummaryFactory.buildList(3, {
   database_cluster_id: null,
   application_cluster_health: 'unknown',
   database_cluster_health: 'unknown',
+  application_health: 'passing',
   database_health: 'passing',
   hosts_health: 'passing',
   sapsystem_health: 'passing',
+});
+const staleSummary = healthSummaryFactory.buildList(3, {
+  application_stale_at: faker.date.past(),
+  database_stale_at: faker.date.past(),
+  application_cluster_stale_at: faker.date.past(),
+  database_cluster_stale_at: faker.date.past(),
+  hosts_stale_at: faker.date.past(),
 });
 
 function ContainerWrapper({ children }) {
@@ -31,7 +43,7 @@ function ContainerWrapper({ children }) {
 
 export default {
   title: 'Layouts/HomeHealthSummary',
-  components: HomeHealthSummary,
+  component: HomeHealthSummary,
   decorators: [
     (Story) => (
       <MemoryRouter>
@@ -44,6 +56,23 @@ export default {
       <HomeHealthSummary {...args} />
     </ContainerWrapper>
   ),
+  argTypes: {
+    sapSystemsHealth: {
+      description: 'Health summary of SAP systems',
+      control: { type: 'object' },
+    },
+    loading: {
+      description: 'Loading state of the health summary',
+      control: { type: 'boolean' },
+    },
+  },
+};
+
+export const Default = {
+  args: {
+    sapSystemsHealth: healthSummaryFactory.buildList(3),
+    loading: false,
+  },
 };
 
 export const Random = {
@@ -55,21 +84,28 @@ export const Random = {
 
 export const Empty = {
   args: {
-    ...Random.args,
     sapSystemsHealth: [],
+    loading: false,
   },
 };
 
 export const Healthy = {
   args: {
-    ...Random.args,
     sapSystemsHealth: healthySummary,
+    loading: false,
   },
 };
 
 export const UnClustered = {
   args: {
-    ...Random.args,
     sapSystemsHealth: unClusteredSummary,
+    loading: false,
+  },
+};
+
+export const Stale = {
+  args: {
+    sapSystemsHealth: staleSummary,
+    loading: false,
   },
 };

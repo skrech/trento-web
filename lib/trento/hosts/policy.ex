@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Hosts.Policy do
   @moduledoc """
   Policy for the Host resource
@@ -30,9 +33,7 @@ defmodule Trento.Hosts.Policy do
 
   def authorize(operation, %User{} = user, HostReadModel)
       when operation in HostOperations.values(),
-      do:
-        has_global_ability?(user) or
-          user_has_ability?(user, %{name: Atom.to_string(operation), resource: "host"})
+      do: has_operation_ability?(user, Atom.to_string(operation), "host")
 
   def authorize(_, _, _), do: true
 end

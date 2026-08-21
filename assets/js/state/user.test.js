@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import { faker } from '@faker-js/faker';
 import { userFactory } from '@lib/test-utils/factories/users';
 
@@ -53,6 +56,8 @@ describe('user reducer', () => {
       updated_at,
       analytics_enabled,
       analytics_eula_accepted,
+      timezone,
+      ai_configuration,
     } = userFactory.build();
 
     const action = setUser({
@@ -65,6 +70,8 @@ describe('user reducer', () => {
       updated_at,
       analytics_enabled,
       analytics_eula_accepted,
+      timezone,
+      ai_configuration,
     });
 
     expect(userReducer(initialState, action)).toEqual({
@@ -78,6 +85,8 @@ describe('user reducer', () => {
       updated_at,
       analytics_enabled,
       analytics_eula_accepted,
+      timezone,
+      ai_configuration,
     });
   });
 });

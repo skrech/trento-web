@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * For a detailed explanation regarding each configuration property, visit:
  * https://jestjs.io/docs/configuration
@@ -69,6 +72,19 @@ module.exports = {
       ssoCallbackUrl: '/auth/oidc_callback',
       ssoEnrollmentUrl: '/api/session/oidc_local/callback',
       aTestVariable: 123,
+      aiEnabled: true,
+      aiProviders: {
+        googleai: [
+          'gemini-2.5-pro',
+          'gemini-2.5-flash',
+          'gemini-2.5-flash-lite',
+          'gemini-3.1-flash-preview',
+          'gemini-3.1-flash-lite-preview',
+          'gemini-3.1-pro-preview',
+        ],
+        openai: ['o3-mini', 'o3', 'gpt-4.1', 'gpt-4', 'gpt-5-mini', 'gpt-5.4'],
+        anthropic: ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
+      },
     },
   },
 
@@ -98,9 +114,10 @@ module.exports = {
     '^@pages(.*)$': '<rootDir>/js/pages$1',
     '^@state(.*)$': '<rootDir>/js/state$1',
     phoenix: '<rootDir>/mocks/phoenix.js',
-    'react-markdown': '<rootDir>/mocks/reactMarkdown.js',
-    'remark-gfm': '<rootDir>/mocks/remarkPlugin.js',
+    '^react-markdown$': '<rootDir>/mocks/reactMarkdown.js',
+    '^remark-gfm$': '<rootDir>/mocks/remarkPlugin.js',
     '\\.(jpg|ico|jpeg|png|gif|svg)$': '<rootDir>/mocks/fileMock.js',
+    '\\.css$': '<rootDir>/mocks/fileMock.js',
   },
 
   // An array of regexp pattern strings, matched against all module paths before considered 'visible' to the module loader
@@ -158,10 +175,10 @@ module.exports = {
   // runner: "jest-runner",
 
   // The paths to modules that run some code to configure or set up the testing environment before each test
-  setupFiles: ['./setupTests.js'],
+  // setupFiles: [],
 
   // A list of paths to modules that run some code to configure or set up the testing framework before each test
-  // setupFilesAfterEnv: [],
+  setupFilesAfterEnv: ['./setupTests.js'],
 
   // The number of seconds after which a test is considered as slow and reported as such in the results.
   // slowTestThreshold: 5,
@@ -211,7 +228,17 @@ module.exports = {
 
   // Allow transforming ESM-only deps (e.g. @faker-js/faker) inside node_modules.
   // An array of regexp pattern strings that are matched against all source file paths, matched files will skip transformation
-  transformIgnorePatterns: ['/node_modules/(?!(?:@faker-js/faker)/)'],
+  //
+  // The second group is react-syntax-highlighter's ESM-only transitive tree
+  // (refractor and its hast/character-entity helpers). Regenerate it after a
+  // bump by walking the dependency graph for packages with `"type": "module"`.
+  transformIgnorePatterns: [
+    '/node_modules/(?!(?:@faker-js/faker|@assistant-ui|@ag-ui|assistant-stream|assistant-cloud|safe-content-frame|nanoid|zustand|use-sync-external-store' +
+      '|react-syntax-highlighter|refractor|hastscript|hast-util-parse-selector|property-information' +
+      '|space-separated-tokens|comma-separated-tokens|decode-named-character-reference|parse-entities' +
+      '|character-entities|character-entities-legacy|character-reference-invalid' +
+      '|is-alphabetical|is-alphanumerical|is-decimal|is-hexadecimal)/)',
+  ],
 
   // An array of regexp pattern strings that are matched against all modules before the module loader will automatically return a mock for them
   // unmockedModulePathPatterns: undefined,

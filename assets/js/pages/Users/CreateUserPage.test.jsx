@@ -1,8 +1,10 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 
 import { render, screen } from '@testing-library/react';
 import { toast } from 'react-hot-toast';
-import 'intersection-observer';
 import '@testing-library/jest-dom';
 
 import userEvent from '@testing-library/user-event';
@@ -12,6 +14,7 @@ import { faker } from '@faker-js/faker';
 import * as router from 'react-router';
 
 import { networkClient } from '@lib/network';
+import { timezones } from '@lib/timezones';
 import * as authConfig from '@lib/auth/config';
 import { abilityFactory, userFactory } from '@lib/test-utils/factories/users';
 
@@ -71,6 +74,7 @@ describe('CreateUserPage', () => {
     const { fullname, email, username } = userFactory.build();
     const password = faker.internet.password();
     const abilities = abilityFactory.buildList(2);
+    const { value: timezoneValue, label: timezoneLabel } = timezones[0];
 
     axiosMock
       .onPost(USERS_URL)
@@ -85,6 +89,11 @@ describe('CreateUserPage', () => {
     await user.type(screen.getByPlaceholderText('Enter username'), username);
     await user.type(screen.getByPlaceholderText('Enter password'), password);
     await user.type(screen.getByPlaceholderText('Re-enter password'), password);
+
+    const timezoneSelector = screen.getByRole('combobox', { name: 'Timezone' });
+    await user.click(timezoneSelector);
+    await user.type(timezoneSelector, timezoneValue);
+    await user.click(await screen.findByText(timezoneLabel));
 
     await user.click(screen.getByLabelText('permissions'));
 

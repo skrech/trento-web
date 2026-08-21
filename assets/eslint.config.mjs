@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import { defineConfig } from 'eslint/config';
 import js from '@eslint/js';
 import reactPlugin from 'eslint-plugin-react';
@@ -158,6 +161,21 @@ export default defineConfig([
       ...storybookPlugin.configs.recommended.rules,
 
       'no-console': 'error',
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'crypto',
+          property: 'randomUUID',
+          message:
+            "crypto.randomUUID is secure-context only and is undefined over plain http. Use `import { v4 as uuidv4 } from 'uuid'`, which falls back to crypto.getRandomValues.",
+        },
+        {
+          object: 'crypto',
+          property: 'subtle',
+          message:
+            'crypto.subtle is secure-context only and is undefined over plain http.',
+        },
+      ],
       'no-unused-vars': [
         'error',
         {

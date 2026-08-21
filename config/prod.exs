@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 import Config
 
 config :trento, TrentoWeb.Endpoint,
@@ -12,5 +15,4 @@ config :trento, Trento.SoftwareUpdates.Discovery,
 config :trento,
   operations_enabled: true
 
-# Do not print debug messages in production
-# config :logger, level: :info
+config :trento, :ai, enabled: true

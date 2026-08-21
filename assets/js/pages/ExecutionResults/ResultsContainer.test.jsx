@@ -1,7 +1,9 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 
 import { screen } from '@testing-library/react';
-import 'intersection-observer';
 import '@testing-library/jest-dom';
 
 import { renderWithRouter } from '@lib/test-utils';

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -19,7 +22,9 @@ describe('SaptuneSolutionOperationModal', () => {
   `(
     'should show correct title and description',
     async ({ operation, title }) => {
-      render(<SaptuneSolutionOperationModal operation={operation} isOpen />);
+      await act(() =>
+        render(<SaptuneSolutionOperationModal operation={operation} isOpen />)
+      );
 
       expect(screen.getByText(title)).toBeInTheDocument();
       expect(
@@ -31,12 +36,14 @@ describe('SaptuneSolutionOperationModal', () => {
   it('should forbid applying a solution until one is actually selected', async () => {
     const user = userEvent.setup();
 
-    render(
-      <SaptuneSolutionOperationModal
-        operation={SAPTUNE_SOLUTION_APPLY}
-        isOpen
-        isAppRunning
-      />
+    await act(() =>
+      render(
+        <SaptuneSolutionOperationModal
+          operation={SAPTUNE_SOLUTION_APPLY}
+          isOpen
+          isAppRunning
+        />
+      )
     );
 
     expect(screen.getByText('Request')).toBeDisabled();
@@ -50,14 +57,17 @@ describe('SaptuneSolutionOperationModal', () => {
   it('should reset internal state when closing the modal', async () => {
     const user = userEvent.setup();
 
-    const { rerender } = await act(async () =>
-      render(
-        <SaptuneSolutionOperationModal
-          operation={SAPTUNE_SOLUTION_APPLY}
-          isOpen
-          isAppRunning
-        />
-      )
+    const { rerender } = await act(
+      async () =>
+        await act(() =>
+          render(
+            <SaptuneSolutionOperationModal
+              operation={SAPTUNE_SOLUTION_APPLY}
+              isOpen
+              isAppRunning
+            />
+          )
+        )
     );
 
     await user.click(screen.getByText('Select a saptune solution'));
@@ -65,7 +75,7 @@ describe('SaptuneSolutionOperationModal', () => {
 
     await user.click(screen.getByText('Cancel'));
 
-    await act(async () =>
+    await act(() =>
       rerender(
         <SaptuneSolutionOperationModal
           operation={SAPTUNE_SOLUTION_APPLY}
@@ -85,7 +95,7 @@ describe('SaptuneSolutionOperationModal', () => {
     const user = userEvent.setup();
     const onCancel = jest.fn();
 
-    await act(async () =>
+    await act(() =>
       render(
         <SaptuneSolutionOperationModal
           operation={SAPTUNE_SOLUTION_APPLY}
@@ -105,13 +115,15 @@ describe('SaptuneSolutionOperationModal', () => {
     const user = userEvent.setup();
     const mockOnRequest = jest.fn();
 
-    render(
-      <SaptuneSolutionOperationModal
-        operation={SAPTUNE_SOLUTION_APPLY}
-        isOpen
-        isHanaRunning
-        onRequest={mockOnRequest}
-      />
+    await act(() =>
+      render(
+        <SaptuneSolutionOperationModal
+          operation={SAPTUNE_SOLUTION_APPLY}
+          isOpen
+          isHanaRunning
+          onRequest={mockOnRequest}
+        />
+      )
     );
 
     expect(screen.getByText('Request')).toBeDisabled();
@@ -130,12 +142,14 @@ describe('SaptuneSolutionOperationModal', () => {
   it('should render Application solutions', async () => {
     const user = userEvent.setup();
 
-    render(
-      <SaptuneSolutionOperationModal
-        operation={SAPTUNE_SOLUTION_APPLY}
-        isOpen
-        isAppRunning
-      />
+    await act(() =>
+      render(
+        <SaptuneSolutionOperationModal
+          operation={SAPTUNE_SOLUTION_APPLY}
+          isOpen
+          isAppRunning
+        />
+      )
     );
 
     await user.click(screen.getByText('Select a saptune solution'));
@@ -147,13 +161,15 @@ describe('SaptuneSolutionOperationModal', () => {
   it('should render HANA and Application solutions', async () => {
     const user = userEvent.setup();
 
-    render(
-      <SaptuneSolutionOperationModal
-        operation={SAPTUNE_SOLUTION_APPLY}
-        isOpen
-        isHanaRunning
-        isAppRunning
-      />
+    await act(() =>
+      render(
+        <SaptuneSolutionOperationModal
+          operation={SAPTUNE_SOLUTION_APPLY}
+          isOpen
+          isHanaRunning
+          isAppRunning
+        />
+      )
     );
 
     await waitFor(async () => {
@@ -167,18 +183,20 @@ describe('SaptuneSolutionOperationModal', () => {
   it('should render proper options when a solution is currently applied', async () => {
     const user = userEvent.setup();
 
-    render(
-      <SaptuneSolutionOperationModal
-        operation={SAPTUNE_SOLUTION_CHANGE}
-        isOpen
-        isHanaRunning
-        currentlyApplied="HANA"
-      />
+    await act(() =>
+      render(
+        <SaptuneSolutionOperationModal
+          operation={SAPTUNE_SOLUTION_CHANGE}
+          isOpen
+          isHanaRunning
+          currentlyApplied="HANA"
+        />
+      )
     );
 
-    expect(screen.getByRole('button', { name: 'HANA' })).toBeInTheDocument();
+    expect(screen.getByText('HANA')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'HANA' }));
+    await user.click(screen.getByRole('combobox', { name: 'solutions' }));
 
     expect(
       screen.queryByText('Select a saptune solution')
@@ -188,16 +206,18 @@ describe('SaptuneSolutionOperationModal', () => {
   it('currently applied solution should be disabled', async () => {
     const user = userEvent.setup();
 
-    render(
-      <SaptuneSolutionOperationModal
-        operation={SAPTUNE_SOLUTION_CHANGE}
-        isOpen
-        isHanaRunning
-        currentlyApplied="HANA"
-      />
+    await act(() =>
+      render(
+        <SaptuneSolutionOperationModal
+          operation={SAPTUNE_SOLUTION_CHANGE}
+          isOpen
+          isHanaRunning
+          currentlyApplied="HANA"
+        />
+      )
     );
 
-    await user.click(screen.getByRole('button', { name: 'HANA' }));
+    await user.click(screen.getByRole('combobox', { name: 'solutions' }));
 
     expect(screen.getByRole('option', { name: 'HANA' })).toHaveAttribute(
       'aria-disabled',

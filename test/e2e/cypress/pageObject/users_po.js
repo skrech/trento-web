@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
+import { random } from 'lodash';
 import { addDays } from 'date-fns';
 
 export * from './base_po.js';
@@ -15,6 +19,7 @@ export const DEFAULT_TOKEN_EXPIRES_AT = addDays(new Date(), 10);
 
 const totpEnrollmentEndpointAlias = 'totpEnrollment';
 const profileEndpointAlias = 'analyticsClosed';
+const clearAIConfigurationEndpointAlias = 'clearAIConfiguration';
 
 // UI Element Selectors
 const createUserButton = 'button:contains("Create User")';
@@ -37,7 +42,8 @@ const passwordConfirmationInputField =
   'input[aria-label^="password"][aria-label*="confirmation"]';
 const saveNewPasswordButton = 'div[id*="panel"] button:contains("Save")';
 const generatePasswordButton = 'div[class*="grid"] button[class*="green"]';
-const submitUserCreationButton = 'button:contains("Create")';
+const submitUserCreationButton =
+  'div[class*="container"] button:contains("Create")';
 const cancelUserCreationButton = 'button:contains("Cancel")';
 const saveChangesButton = 'button:contains("Save")';
 const authenticatorAppSwitch =
@@ -48,12 +54,14 @@ const newTotpCodeInputField = 'input[placeholder="TOTP code"]';
 const verifyTotpButton = 'button:contains("Verify")';
 const confirmDisableTotpButton =
   'div[id*="headlessui-dialog-panel"] button:contains("Disable")';
-const editUserTotpDropdown = 'button.totp-selection-dropdown';
-const enableUserTotpOption = `${editUserTotpDropdown} + div div:contains("Enabled")`;
+const editUserTotpDropdown = basePage.getSelectControlValue(
+  '[aria-label="totp-status"]'
+);
+const enableUserTotpOption = `${basePage.selectOptions}:contains("Enabled")`;
 const usersListAdminUser = `a:contains("${basePage.adminUser.username}")`;
 const usersListPlainUser = `a:contains("${basePage.plainUser.username}")`;
 const permissionsDropdown = 'label:contains("Permissions") + div';
-const statusDropdown = 'button.status-selection-dropdown';
+const statusDropdown = basePage.getSelectControlValue('[aria-label="status"]');
 const removePermissionButton = 'div[aria-label*="Remove"] svg';
 const permissionsInputField =
   'label:contains("Permissions") + div span div div:eq(0)';
@@ -74,6 +82,39 @@ const continueWithoutAnalyticsButton =
   'button:contains("Continue without Analytics")';
 const neverShowAgainCheckbox = 'div input[type="checkbox"]';
 const analyticsOptInSwitch = 'label:contains("Analytics Opt-in") + div button';
+const timezoneInputField = 'input#timezone';
+const timezoneStoredValue = 'input[name="timezone"]';
+
+// AI Configuration Selectors
+
+const aiConfigurationSection = 'h2:contains("AI Configuration")';
+const aiConfigurationSectionDescription =
+  'p:contains("Settings used by Liz, your AI Assistant.")';
+const aiConfigurationEditButton =
+  'button[aria-label="ai-configuration-edit-button"]:contains("Edit Settings")';
+
+const aiConfigurationModelProvider = 'div:contains("Model Provider") + div';
+const aiConfigurationModel = 'div:contains("Model") + div';
+const aiConfigurationApiKey = 'div:contains("API Key") + div';
+
+const aiSelectModelProviderDropdown = basePage.getSelectControlValue(
+  '[aria-label="ai-provider"]'
+);
+const aiSelectModelDropdown = basePage.getSelectControlValue(
+  '[aria-label="ai-model"]'
+);
+const aiApiKeyInputField = 'input[aria-label="ai-api-key-input"]';
+
+const saveAIConfigurationButton = 'button[aria-label="Save AI Configuration"]';
+
+const aiConfigurationClearButton =
+  'button[aria-label="ai-configuration-clear-button"]:contains("Clear Settings")';
+const clearAIConfigurationModal =
+  'div[id*="headlessui-dialog-panel"] h2:contains("Clear AI Configuration")';
+const confirmClearAIConfigurationButton =
+  'button[aria-label="confirm-clear-ai-settings"]';
+const cancelClearAIConfigurationButton =
+  'div[id*="headlessui-dialog-panel"] button:contains("Cancel")';
 
 // Toaster Messages
 const userAlreadyUpdatedWarning =
@@ -225,8 +266,10 @@ export const userDeletedSuccesfullyToasterIsDisplayed = () =>
 export const invalidCurrentPasswordErrorIsDisplayed = () =>
   cy.get(invalidPasswordErrorLabel).should('be.visible');
 
-export const validateRequiredFieldsErrors = () =>
+export const validateRequiredFieldsErrors = () => {
+  cy.get(requiredFieldsErrors).should('exist');
   cy.get(requiredFieldsErrors).should('have.length', 5);
+};
 
 export const invalidEmailErrorIsDisplayed = () =>
   cy
@@ -295,21 +338,25 @@ export const totpEnrollmentErrorIsDisplayed = () =>
 export const authenticatorAppSwitchIsEnabled = () =>
   cy.get(authenticatorAppSwitch).should('be.enabled');
 
+export const authenticatorAppSwitchIsUnchecked = () =>
+  cy
+    .get(authenticatorAppSwitch)
+    .should('have.attr', 'aria-checked', 'false')
+    .and('be.enabled');
+
 export const totpEnabledToasterIsDisplayed = () =>
   cy.get(totpEnabledToaster).should('be.visible');
 
-export const enableTotpOptionIsDisabled = () => {
-  return cy
+export const enableTotpOptionIsDisabled = () =>
+  cy
     .get(enableUserTotpOption)
     .invoke('attr', 'aria-disabled')
     .should('eq', 'true');
-};
 
-export const newIssuedTotpSecretIsDifferent = (originalTotpSecret) => {
-  getTotpSecret().then((newTotpSecret) => {
-    cy.wrap(newTotpSecret).should('not.equal', originalTotpSecret);
-  });
-};
+export const newIssuedTotpSecretIsDifferent = (originalTotpSecret) =>
+  getTotpSecret().then((newTotpSecret) =>
+    cy.wrap(newTotpSecret).should('not.equal', originalTotpSecret)
+  );
 
 export const plainUserFullNameIsDisplayed = () =>
   _expectedFullNameIsDisplayed(basePage.plainUser.fullname);
@@ -354,11 +401,11 @@ export const adminUserPermissionsAreDisplayed = () =>
 
 export const personalAccessTokensAreDisplayed = (tokens) => {
   if (tokens.length === 0) {
-    cy.get(emptyListAccessTokens).should('be.visible');
+    return cy.get(emptyListAccessTokens).should('be.visible');
   } else {
-    tokens.forEach(({ name }) => {
-      cy.get(accessTokenName).should('have.text', name);
-    });
+    return cy
+      .wrap(tokens)
+      .each(({ name }) => cy.get(accessTokenName).should('have.text', name));
   }
 };
 
@@ -373,20 +420,18 @@ export const newAccessTokenIsDisplayed = () => {
 export const modalCopyAccessTokenButtonIsDisplayed = () =>
   cy.get(modalCopyAccessTokenButton).should('be.visible');
 
-export const lastLoginShouldBeEmpty = () => {
+export const lastLoginShouldBeEmpty = () =>
   cy.get(newUserLastLogin).should('contain', '-');
-};
 
-export const lastLoginShouldNotBeEmpty = () => {
+export const lastLoginShouldNotBeEmpty = () =>
   cy.get(newUserLastLogin).should('not.contain', '-');
-};
 
-export const lastLoginUserViewShouldBeEmpty = () => {
+export const lastLoginUserViewShouldBeEmpty = () =>
   cy.get(userViewLastLoginField).should('contain', '-');
-};
 
-export const lastLoginUserViewShouldHaveUpdatedDate = () => {
-  cy.get(userViewLastLoginField)
+export const lastLoginUserViewShouldHaveUpdatedDate = () =>
+  cy
+    .get(userViewLastLoginField)
     .invoke('text')
     .then((dateText) => {
       const date = Number(new Date(dateText));
@@ -395,7 +440,6 @@ export const lastLoginUserViewShouldHaveUpdatedDate = () => {
       // 5 seconds delta
       expect(date).to.be.closeTo(today, 5000);
     });
-};
 
 export const ifAnalyticsModalIsDisplayed = (callback, neverShowAgain) =>
   cy.get('body').then(($body) => {
@@ -409,13 +453,13 @@ export const analyticsModalIsNotDisplayed = () => {
   // the intercept is needed to wait until the page is loaded
   cy.intercept('GET', '/api/v1/profile').as(profileEndpointAlias);
   basePage.waitForRequest(profileEndpointAlias);
-  cy.get(analyticsModal).should('not.exist');
+  return cy.get(analyticsModal).should('not.exist');
 };
 
 export const clickEnableAnalytics = () => {
   cy.intercept('PATCH', '/api/v1/profile').as(profileEndpointAlias);
   cy.get(enableAnalyticsButton).click();
-  basePage.waitForRequest(profileEndpointAlias);
+  return basePage.waitForRequest(profileEndpointAlias);
 };
 
 export const clickContinueWithoutAnalytics = (neverShowAgain = true) => {
@@ -423,14 +467,34 @@ export const clickContinueWithoutAnalytics = (neverShowAgain = true) => {
     cy.get(neverShowAgainCheckbox).click();
     cy.intercept('PATCH', '/api/v1/profile').as(profileEndpointAlias);
   }
-  cy.get(continueWithoutAnalyticsButton).click();
-  if (neverShowAgain) {
-    basePage.waitForRequest(profileEndpointAlias);
-  }
+
+  return cy
+    .get(continueWithoutAnalyticsButton)
+    .click()
+    .then(() => {
+      if (neverShowAgain) {
+        return basePage.waitForRequest(profileEndpointAlias);
+      }
+    });
 };
 
 export const clickAnalyticsOptInSwitch = () =>
   cy.get(analyticsOptInSwitch).click();
+
+export const selectTimezone = (timezone) =>
+  cy
+    .get(timezoneInputField)
+    .should('be.visible')
+    .click()
+    .type(`{selectall}{backspace}${timezone}`)
+    .get('[role="listbox"]', { timeout: 10000 })
+    .contains('[role="option"]', timezone)
+    .click()
+    .get(timezoneStoredValue)
+    .should('have.value', timezone);
+
+export const timezoneValueIsDisplayed = (timezone) =>
+  cy.get(timezoneStoredValue).should('have.value', timezone);
 
 // API
 export const interceptDeleteUser = () =>
@@ -450,35 +514,30 @@ export const waitForTotpEnrollmentEndpoint = () =>
 export const apiGetProfileInfo = (
   username = USER.username,
   password = PASSWORD
-) => {
-  return basePage.apiLogin(username, password).then(({ accessToken }) => {
-    return cy
+) =>
+  basePage.apiLogin(username, password).then(({ accessToken }) =>
+    cy
       .request({
         url: '/api/v1/profile',
         method: 'GET',
         auth: { bearer: accessToken },
         body: {},
       })
-      .then(({ body: profile }) => {
-        return profile;
-      });
-  });
-};
+      .then(({ body: profile }) => profile)
+  );
 
 export const apiDisableUser = () =>
-  apiGetProfileInfo().then(({ id }) => {
-    apiPatchUser(id, { enabled: false });
-  });
+  apiGetProfileInfo().then(({ id }) => apiPatchUser(id, { enabled: false }));
 
 export const apiApplyAllUsersPermission = () =>
-  apiGetProfileInfo().then(({ id }) => {
+  apiGetProfileInfo().then(({ id }) =>
     apiPatchUser(id, {
       abilities: [{ id: 2, name: 'all', resource: 'users', label: 'test' }],
-    });
-  });
+    })
+  );
 
-export const apiCreateUser = () => {
-  return basePage.apiLogin().then(({ accessToken }) => {
+export const apiCreateUser = () =>
+  basePage.apiLogin().then(({ accessToken }) => {
     const body = {
       fullname: USER.fullname,
       email: USER.email,
@@ -495,34 +554,32 @@ export const apiCreateUser = () => {
       body,
     });
   });
-};
 
-export const apiPatchUser = (id, payload) => {
-  return basePage.apiLogin().then(({ accessToken }) =>
+export const apiPatchUser = (id, payload) =>
+  basePage.apiLogin().then(({ accessToken }) =>
     cy
       .request({
         url: `${usersEndpoint}/${id}`,
         method: 'GET',
         auth: { bearer: accessToken },
       })
-      .then(({ headers: { etag } }) => {
+      .then(({ headers: { etag } }) =>
         cy.request({
           url: `${usersEndpoint}/${id}`,
           method: 'PATCH',
           auth: { bearer: accessToken },
           body: payload,
           headers: { 'if-match': etag },
-        });
-      })
+        })
+      )
   );
-};
 
 export const apiCreatePersonalAccessToken = (
   name = DEFAULT_TOKEN_NAME,
   expiresAt = DEFAULT_TOKEN_EXPIRES_AT
-) => {
-  return basePage.apiLogin(USER.username, PASSWORD).then(({ accessToken }) => {
-    return cy
+) =>
+  basePage.apiLogin(USER.username, PASSWORD).then(({ accessToken }) =>
+    cy
       .request({
         url: '/api/v1/profile/tokens',
         method: 'POST',
@@ -532,35 +589,159 @@ export const apiCreatePersonalAccessToken = (
           expires_at: expiresAt,
         },
       })
-      .then(({ body: token }) => {
-        return token;
-      });
-  });
-};
+      .then(({ body: token }) => token)
+  );
 
-export const apiDeletePersonalAccessToken = (id) => {
-  return basePage.apiLogin(USER.username, PASSWORD).then(({ accessToken }) =>
+export const apiDeletePersonalAccessToken = (id) =>
+  basePage.apiLogin(USER.username, PASSWORD).then(({ accessToken }) =>
     cy.request({
       url: `/api/v1/profile/tokens/${id}`,
       method: 'DELETE',
       auth: { bearer: accessToken },
     })
   );
-};
 
 export const apiPersonalAccessTokenAuthorized = (
   accessToken,
   url = '/api/v1/hosts'
-) => {
-  _assertAuthenticationStatusCode(accessToken, 200, url);
-};
+) => _assertAuthenticationStatusCode(accessToken, 200, url);
 
-export const apiPersonalAccessTokenUnauthorized = (accessToken) => {
+export const apiPersonalAccessTokenUnauthorized = (accessToken) =>
   _assertAuthenticationStatusCode(accessToken, 401);
+
+export const apiPersonalAccessTokenForbidden = (accessToken) =>
+  _assertAuthenticationStatusCode(accessToken, 403, usersEndpoint);
+
+export const apiCreateAIConfiguration = (provider, model, apiKey) =>
+  basePage.apiLogin(USER.username, PASSWORD).then(({ accessToken }) =>
+    cy
+      .request({
+        url: '/api/v1/profile/ai_configuration',
+        method: 'POST',
+        auth: { bearer: accessToken },
+        body: {
+          provider,
+          model,
+          api_key: apiKey,
+        },
+      })
+      .then(({ body: aiConfiguration }) => aiConfiguration)
+  );
+
+const _aiProviderModels = (provider) =>
+  cy.window().then((win) => win.eval('config.aiProviders')[provider]);
+
+export const apiCreateAIConfigurationWithFirstModel = (provider, apiKey) =>
+  _aiProviderModels(provider).then(([model]) =>
+    apiCreateAIConfiguration(provider, model, apiKey).then(() => model)
+  );
+
+export const aiConfigurationSectionIsDisplayed = () => {
+  cy.get(aiConfigurationSection).should('be.visible');
+  cy.get(aiConfigurationSectionDescription).should('be.visible');
+  return cy.get(aiConfigurationEditButton).should('be.visible');
 };
 
-export const apiPersonalAccessTokenForbidden = (accessToken) => {
-  _assertAuthenticationStatusCode(accessToken, 403, usersEndpoint);
+export const aiConfigurationModelProviderShouldBe = (expectedContent) =>
+  cy.get(aiConfigurationModelProvider).should('contain', expectedContent);
+
+export const aiConfigurationModelShouldBe = (expectedContent) =>
+  cy.get(aiConfigurationModel).should('contain', expectedContent);
+
+export const aiConfigurationApiKeyShouldBe = (expectedContent) =>
+  cy.get(aiConfigurationApiKey).should('contain', expectedContent);
+
+export const requiredAPIKeyErrorIsDisplayed = (
+  errorMessage = 'Required field'
+) => cy.contains(requiredFieldsErrors, errorMessage).should('have.length', 1);
+
+export const clickEditAIConfigurationButton = () =>
+  cy.get(aiConfigurationEditButton).click();
+
+export const selectAIProvider = (provider) =>
+  basePage.selectFromDropdown(aiSelectModelProviderDropdown, provider);
+
+const _selectAIModelAtIndex = (index) =>
+  cy
+    .get(basePage.selectOptions)
+    .eq(index)
+    .invoke('text')
+    .then((model) => {
+      cy.get(basePage.selectOptions).eq(index).click();
+      cy.get(aiSelectModelDropdown).should('have.text', model);
+      return cy.wrap(model);
+    });
+
+export const selectFirstAIModel = () => {
+  cy.get(aiSelectModelDropdown).click();
+  return _selectAIModelAtIndex(0);
+};
+
+export const selectAnotherAIModel = () => {
+  cy.get(aiSelectModelDropdown).click();
+  return cy
+    .get(basePage.selectOptions)
+    .should('have.length.at.least', 2)
+    .then(($models) => _selectAIModelAtIndex(random(1, $models.length - 1)));
+};
+
+export const typeAIConfigurationApiKey = (apiKey) =>
+  cy.get(aiApiKeyInputField).type(apiKey);
+
+const interceptAIConfigurationOperation = (
+  method,
+  alias,
+  shouldWait = true
+) => {
+  cy.intercept(method, '/api/v1/profile/ai_configuration').as(alias);
+  cy.get(saveAIConfigurationButton, { name: 'Save' }).click();
+  if (shouldWait) {
+    basePage.waitForRequest(alias);
+  }
+};
+
+export const clickModalSaveAIConfigurationButton = (shouldWait = true) => {
+  interceptAIConfigurationOperation(
+    'POST',
+    'createAIConfiguration',
+    shouldWait
+  );
+};
+
+export const clickModalUpdateAIConfigurationButton = (shouldWait = true) => {
+  interceptAIConfigurationOperation(
+    'PATCH',
+    'updateAIConfiguration',
+    shouldWait
+  );
+};
+
+export const clearAIConfigurationButtonIsDisabled = () =>
+  cy.get(aiConfigurationClearButton).should('be.disabled');
+
+export const clearAIConfigurationButtonIsEnabled = () =>
+  cy.get(aiConfigurationClearButton).should('not.be.disabled');
+
+export const clickClearAIConfigurationButton = () =>
+  cy.get(aiConfigurationClearButton).click();
+
+export const clearAIConfigurationModalIsDisplayed = () =>
+  cy.get(clearAIConfigurationModal).should('be.visible');
+
+export const clearAIConfigurationModalIsNotDisplayed = () =>
+  cy.get(clearAIConfigurationModal).should('not.exist');
+
+export const clickCancelClearAIConfiguration = () =>
+  cy.get(cancelClearAIConfigurationButton).click();
+
+export const clickConfirmClearAIConfiguration = (shouldWait = true) => {
+  cy.intercept('DELETE', '/api/v1/profile/ai_configuration').as(
+    clearAIConfigurationEndpointAlias
+  );
+  cy.get(confirmClearAIConfigurationButton).click();
+  if (shouldWait) {
+    basePage.waitForRequest(clearAIConfigurationEndpointAlias);
+  }
 };
 
 export const apiModifyUserFullName = () =>
@@ -572,16 +753,14 @@ const _getUserIdFromPath = () =>
 export const apiLoginAndCreateSession = (
   username = USER.username,
   password = PASSWORD
-) => {
-  basePage.apiLoginAndCreateSession(username, password);
-};
+) => basePage.apiLoginAndCreateSession(username, password);
 
 const _assertAuthenticationStatusCode = (
   accessToken,
   expectedStatusCode,
   url = '/api/v1/hosts'
-) => {
-  return cy
+) =>
+  cy
     .request({
       method: 'GET',
       url: url,
@@ -593,4 +772,3 @@ const _assertAuthenticationStatusCode = (
         expectedStatusCode
       );
     });
-};

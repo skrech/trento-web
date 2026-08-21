@@ -1,8 +1,14 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useDispatch } from 'react-redux';
+import { pipe, defaultTo, get, getOr } from 'lodash/fp';
+
 import PageHeader from '@common/PageHeader';
 import PersonalAccessTokens from '@common/PersonalAccessTokens';
+import AIConfiguration from '@common/AIConfiguration';
 import { isAdmin } from '@lib/model/users';
 import { isSingleSignOnEnabled } from '@lib/auth/config';
 import ProfileForm from '@pages/Profile/ProfileForm';
@@ -14,6 +20,9 @@ import {
   resetTotpEnrolling,
   deletePersonalAccessToken,
   generatePersonalAccessToken,
+  createAIConfiguration,
+  editAIConfiguration,
+  clearAIConfiguration,
 } from '@lib/api/users';
 import {
   setUser as setUserInState,
@@ -21,6 +30,8 @@ import {
 } from '@state/user';
 import { dismissNotification } from '@state/notifications';
 import { getAnalyticsEnabledConfig } from '@lib/analytics';
+import { getFromConfig } from '@lib/config';
+import { timezones } from '@lib/timezones';
 
 const analyticsEnabledConfig = getAnalyticsEnabledConfig();
 
@@ -166,6 +177,40 @@ function ProfilePage() {
       .catch(() => toast.error('Error deleting personal access token.'));
   };
 
+  const handleSuccessfulAIConfigOperation =
+    (successMessage) =>
+    ({ data }) => {
+      const updatedUser = { ...userState, ai_configuration: data };
+      setUser(updatedUser);
+      dispatch(setUserInState(updatedUser));
+      toast.success(successMessage);
+    };
+
+  const handleFailedAIConfigOperation = (errorMessage) => (error) => {
+    pipe(getOr([], 'response.data.errors'), setErrors, () => {
+      toast.error(errorMessage);
+      throw error;
+    })(error);
+  };
+
+  const createAIConfig = (provider, model, apiKey) => {
+    return createAIConfiguration(provider, model, apiKey)
+      .then(handleSuccessfulAIConfigOperation('AI configuration saved!'))
+      .catch(handleFailedAIConfigOperation('Error saving AI configuration.'));
+  };
+
+  const updateAIConfig = (provider, model, apiKey) => {
+    return editAIConfiguration(provider, model, apiKey)
+      .then(handleSuccessfulAIConfigOperation('AI configuration updated!'))
+      .catch(handleFailedAIConfigOperation('Error updating AI configuration.'));
+  };
+
+  const clearAIConfig = () => {
+    return clearAIConfiguration()
+      .then(handleSuccessfulAIConfigOperation('AI configuration cleared!'))
+      .catch(handleFailedAIConfigOperation('Error clearing AI configuration.'));
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -178,8 +223,11 @@ function ProfilePage() {
     analytics_enabled: analyticsEnabled,
     analytics_eula_accepted: analyticsEulaAccepted,
     totp_enabled: totpEnabled,
+    timezone,
   } = userState;
   const isDefaultAdmin = isAdmin(userState);
+
+  const getAIConfiguration = pipe(get('ai_configuration'), defaultTo({}));
 
   return (
     <>
@@ -193,6 +241,8 @@ function ProfilePage() {
         analyticsEnabled={analyticsEnabled}
         analyticsEulaAccepted={analyticsEulaAccepted}
         totpEnabled={totpEnabled}
+        timezone={timezone}
+        timezones={timezones}
         totpSecret={totpEnrollmentSecret}
         totpQrData={totpEnrollmentQrData}
         errors={errorsState}
@@ -216,7 +266,17 @@ function ProfilePage() {
         onCloseGeneratedTokenModal={setGeneratedAccessToken}
         onDeleteToken={deleteToken}
         onGenerateToken={generateToken}
+        timezone={timezone}
       />
+      {getFromConfig('aiEnabled') && (
+        <AIConfiguration
+          className="mt-4"
+          aiConfiguration={getAIConfiguration(userState)}
+          onCreate={createAIConfig}
+          onUpdate={updateAIConfig}
+          onClear={clearAIConfig}
+        />
+      )}
     </>
   );
 }

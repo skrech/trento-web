@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 import Config
 
 # Configure your database
@@ -160,3 +163,21 @@ config :junit_formatter,
 config :trento,
        :flaky_tests_detection,
        enabled?: System.get_env("WRITE_JUNIT") == "1"
+
+config :trento, :ai,
+  # Avoid the live Wanda fetch during tests. Individual tests opt in by
+  # overriding :tool_sources via ApplicationConfigLoader.Mock.
+  tool_sources: [TrentoWeb.AI.ControllerToolSource],
+  providers: [
+    provider1: [
+      models: [
+        "model1"
+      ]
+    ],
+    provider2: [
+      models: [
+        "model1",
+        "model3"
+      ]
+    ]
+  ]

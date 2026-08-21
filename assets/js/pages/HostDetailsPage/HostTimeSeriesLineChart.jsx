@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useEffect, useRef, useState } from 'react';
 import { fetchHostTimeSeriesData } from '@lib/api/charts';
 import { addMinutes, parseISO, subMinutes } from 'date-fns';
@@ -14,6 +17,7 @@ function HostTimeSeriesLineChart({
   endInterval = new Date(),
   updateFrequency = 30000,
   className,
+  timezone,
 }) {
   const [chartStartInterval, setChartStartInterval] = useState(startInterval);
   const [chartEndInterval, setChartEndInterval] = useState(endInterval);
@@ -88,6 +92,7 @@ function HostTimeSeriesLineChart({
       start={chartStartInterval}
       end={chartEndInterval}
       chartRef={chartRef}
+      timezone={timezone}
       yAxisScaleType={yAxisScaleType}
       yAxisMaxValue={yAxisMaxValue}
       yAxisLabelFormatter={yAxisFormatter}

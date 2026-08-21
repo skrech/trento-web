@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 import { Provider } from 'react-redux';
 import { render } from '@testing-library/react';
@@ -5,6 +8,7 @@ import { BrowserRouter, Route, Routes } from 'react-router';
 import configureStore from 'redux-mock-store';
 import { runSaga } from 'redux-saga';
 
+import { createStore } from '@state';
 import hosts from './data/hosts';
 import clusters from './data/clusters';
 import sapSystems from './data/sapSystems';
@@ -41,8 +45,22 @@ export const defaultInitialState = {
   catalog: { loading: false, data: [], error: null },
 };
 
-export const withState = (component, initialState = {}) => {
-  const store = mockStore(initialState);
+/**
+ * Wrap a component inside a Redux provider with an attached store.
+ *
+ * Note: Depending on useRealStore the store can be a real Redux store
+ * or a MockStore from `redux-mock-store`. Using the MockStore is
+ * deprecated but since it's used a lot across our code-base the
+ * default value of useRealStore is `false`.
+ **/
+export const withState = (
+  component,
+  initialState = {},
+  useRealStore = false
+) => {
+  const store = useRealStore
+    ? createStore(undefined, initialState)
+    : mockStore(initialState);
   return [
     <Provider key="root" store={store}>
       {component}
@@ -81,7 +99,10 @@ export const renderWithRouter = (ui, { route = '/' } = {}) => {
   };
 };
 
-export function renderWithRouterMatch(ui, { path = '/', route = '/' } = {}) {
+export function renderWithRouterMatch(
+  ui,
+  { path = '/', route = '/', children } = {}
+) {
   window.history.pushState({}, 'Test page', route);
 
   return {
@@ -89,6 +110,7 @@ export function renderWithRouterMatch(ui, { path = '/', route = '/' } = {}) {
       <BrowserRouter>
         <Routes>
           <Route path={path} element={ui} />
+          {children}
         </Routes>
       </BrowserRouter>
     ),

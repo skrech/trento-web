@@ -1,4 +1,7 @@
-import CopyButton from '.';
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
+import CopyButton from './CopyButton';
 
 export default {
   title: 'Components/CopyButton',
@@ -6,7 +9,7 @@ export default {
   argTypes: {
     content: {
       description: 'Text content to copy',
-      control: 'text',
+      control: { type: 'text' },
     },
   },
 };

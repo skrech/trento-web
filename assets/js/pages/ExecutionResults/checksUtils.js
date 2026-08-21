@@ -1,8 +1,12 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import {
   EXPECT_SAME,
   TARGET_CLUSTER,
   TARGET_HOST,
   PASSING,
+  EXCLUDED,
   isHostExpectation,
 } from '@lib/model';
 
@@ -12,6 +16,8 @@ export const isTargetCluster = (targetType) => targetType === TARGET_CLUSTER;
 export const isExpectSame = ({ type }) => type === EXPECT_SAME;
 
 export const isAgentCheckError = ({ type }) => !!type;
+
+export const isAgentExcluded = ({ status }) => status === EXCLUDED;
 
 export const description = (catalog, checkId) =>
   catalog.find(({ id }) => id === checkId)?.description;

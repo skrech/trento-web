@@ -1,10 +1,13 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { faker } from '@faker-js/faker';
 import userEvent from '@testing-library/user-event';
-import 'intersection-observer';
 import '@testing-library/jest-dom';
 import {
+  adminUser,
   databaseInstanceFactory,
   hostFactory,
   sapSystemApplicationInstanceFactory,
@@ -153,6 +156,35 @@ describe('HostsLists component', () => {
       const [StatefulHostsList] = withState(<HostsList />, state);
       renderWithRouter(StatefulHostsList);
       expect(screen.getAllByText(duplicatedSID).length).toBe(1);
+    });
+
+    it('should show stale hosts with correct styling', async () => {
+      const staleDate = faker.date.past();
+      const state = {
+        user: adminUser.build(),
+        hostsList: {
+          hosts: [
+            hostFactory.build({ heartbeat: 'critical', stale_at: staleDate }),
+            hostFactory.build({ heartbeat: 'passing', stale_at: null }),
+          ],
+        },
+      };
+
+      const [HostsListWithState] = withState(<HostsList />, state, true);
+
+      renderWithRouter(HostsListWithState);
+
+      const rows = screen.getByRole('table').querySelectorAll('tbody > tr');
+      expect(rows[0]).toHaveClass('bg-gray-100');
+      expect(rows[1]).not.toHaveClass('bg-gray-100');
+
+      expect(
+        within(rows[0]).getByRole('img', { name: /health/i })
+      ).toHaveAttribute('data-stale');
+
+      expect(
+        within(rows[1]).getByRole('img', { name: /health/i })
+      ).not.toHaveAttribute('data-stale');
     });
   });
 
@@ -346,12 +378,20 @@ describe('HostsLists component', () => {
           },
           sapSystemsList: {
             applicationInstances: [
-              { sid: 'PRD', host_id: 'host1' },
-              { sid: 'QAS', host_id: 'host3' },
+              sapSystemApplicationInstanceFactory.build({
+                sid: 'PRD',
+                host_id: 'host1',
+              }),
+              sapSystemApplicationInstanceFactory.build({
+                sid: 'QAS',
+                host_id: 'host3',
+              }),
             ],
+          },
+          databasesList: {
             databaseInstances: [
-              { sid: 'PRD', host_id: 'host2' },
-              { sid: 'QAS', host_id: 'host4' },
+              databaseInstanceFactory.build({ sid: 'PRD', host_id: 'host2' }),
+              databaseInstanceFactory.build({ sid: 'QAS', host_id: 'host4' }),
             ],
           },
         },
@@ -372,30 +412,80 @@ describe('HostsLists component', () => {
         },
         expectedRows: 2,
       },
+      {
+        filter: 'Agent version',
+        options: ['1.0.0', '2.0.0'],
+        state: {
+          ...cleanInitialState,
+          hostsList: {
+            hosts: [].concat(
+              hostFactory.buildList(2, { agent_version: '1.0.0' }),
+              hostFactory.buildList(2, { agent_version: '2.0.0' }),
+              hostFactory.buildList(1, { agent_version: '2.1.0' })
+            ),
+          },
+        },
+        expectedRows: 2,
+      },
     ];
 
     it.each(scenarios)(
       'should filter the table content by $filter filter',
-      ({ filter, options, state, expectedRows }) => {
+      async ({ filter, options, state, expectedRows }) => {
+        const user = userEvent.setup();
+
         const [StatefulHostsList] = withState(<HostsList />, state);
 
         renderWithRouter(StatefulHostsList);
 
-        options.forEach(async (option) => {
-          filterTable(filter, option);
-          screen.getByRole('table');
-          const table = await waitFor(() =>
+        for (const option of options) {
+          await filterTable(user, filter, option);
+
+          const table = screen.getByRole('table');
+          await waitFor(() =>
             expect(table.querySelectorAll('tbody > tr')).toHaveLength(
               expectedRows
             )
           );
 
-          clearFilter(filter);
-        });
+          await clearFilter(user, filter);
+        }
       }
     );
 
-    it('should put the filters values in the query string when filters are selected', () => {
+    it('should list agent version filter options sorted by semver ascending', async () => {
+      const user = userEvent.setup();
+      const state = {
+        ...cleanInitialState,
+        hostsList: {
+          hosts: [].concat(
+            hostFactory.buildList(1, { agent_version: '2.10.0' }),
+            hostFactory.buildList(1, { agent_version: '1.0.0' }),
+            hostFactory.buildList(1, { agent_version: '2.2.0' }),
+            hostFactory.buildList(1, { agent_version: '0.9.0' })
+          ),
+        },
+      };
+
+      const [StatefulHostsList] = withState(<HostsList />, state);
+      renderWithRouter(StatefulHostsList);
+
+      await user.click(screen.getByTestId('filter-Agent version'));
+
+      const optionsList = await screen.findByTestId(
+        'filter-Agent version-options'
+      );
+      const options = await within(optionsList).findAllByRole('option', {
+        hidden: true,
+      });
+      const labels = options.map((li) => li.textContent.trim());
+
+      expect(labels).toEqual(['0.9.0', '1.0.0', '2.2.0', '2.10.0']);
+    });
+
+    it('should put the filters values in the query string when filters are selected', async () => {
+      const user = userEvent.setup();
+
       const hosts = hostFactory.buildList(1, {
         id: 'host1',
         tags: [{ value: 'Tag1' }],
@@ -407,7 +497,10 @@ describe('HostsLists component', () => {
           hosts,
         },
         sapSystemsList: {
-          applicationInstances: [{ sid, host_id: 'host1' }],
+          applicationInstances: sapSystemApplicationInstanceFactory.buildList(
+            1,
+            { sid, host_id: 'host1' }
+          ),
           databaseInstances: [],
         },
       };
@@ -417,17 +510,21 @@ describe('HostsLists component', () => {
       const [StatefulHostsList] = withState(<HostsList />, state);
       renderWithRouter(StatefulHostsList);
 
-      [
+      const filters = [
         ['Health', health],
         ['Hostname', hostname],
         ['SID', sid],
         ['Tags', tags[0].value],
-      ].forEach(([filter, option]) => {
-        filterTable(filter, option);
-      });
+      ];
 
-      expect(window.location.search).toEqual(
-        `?health=${health}&hostname=${hostname}&sid=${sid}&tags=${tags[0].value}`
+      for (const [filter, option] of filters) {
+        await filterTable(user, filter, option);
+      }
+
+      await waitFor(() =>
+        expect(window.location.search).toEqual(
+          `?health=${health}&hostname=${hostname}&sid=${sid}&tags=${tags[0].value}`
+        )
       );
     });
   });

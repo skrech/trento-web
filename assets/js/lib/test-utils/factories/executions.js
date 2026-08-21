@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import { faker } from '@faker-js/faker';
 import { Factory } from 'fishery';
 import { hostFactory, randomObjectFactory } from '.';
@@ -99,6 +102,7 @@ export const agentCheckResultFactory = Factory.define(() => {
 
   return {
     agent_id: faker.string.uuid(),
+    status: 'executed',
     expectation_evaluations: executionExpectationEvaluationFactory.buildList(2),
     facts: executionFactFactory.buildList(2),
     values: executionValueFactory.buildList(2),
@@ -110,6 +114,15 @@ export const agentCheckErrorFactory = Factory.define(() => ({
   facts: executionFactFactory.buildList(2),
   type: faker.color.human(),
   message: faker.hacker.phrase(),
+}));
+
+export const agentCheckExcludedFactory = Factory.define(() => ({
+  agent_id: faker.string.uuid(),
+  status: 'excluded',
+  exclude_expression: 'host.is_majority_maker == true',
+  facts: [],
+  values: [],
+  expectation_evaluations: [],
 }));
 
 export const targetFactory = Factory.define(() => ({
@@ -155,30 +168,6 @@ const checkResultForTarget = (agentId) =>
   agentCheckResultFactory.build({
     agent_id: agentId,
   });
-
-export const checksExecutionCompletedForTargetsFactory = Factory.define(
-  ({ params }) => {
-    const targets = params.targets || [
-      faker.string.uuid(),
-      faker.string.uuid(),
-    ];
-
-    const checkResults = params.check_id
-      ? params.check_id.map((checkID) =>
-          checkResultFactory.build({
-            agents_check_results: targets.map(checkResultForTarget),
-            check_id: checkID,
-          })
-        )
-      : checkResultFactory.buildList(2, {
-          agents_check_results: targets.map(checkResultForTarget),
-        });
-
-    return checksExecutionCompletedFactory.build({
-      check_results: checkResults,
-    });
-  }
-);
 
 export const withEmptyExpectations = (checkResult) => {
   const agents = checkResult.agents_check_results.map((agent) => ({
@@ -254,6 +243,40 @@ export const addCriticalExpectExpectation = (checkResult, expectationName) => {
 };
 export const addPassingExpectSameExpectation = (checkResult, expectationName) =>
   addExpectationWithResult(checkResult, 'expect_same', expectationName, true);
+
+export const checksExecutionCompletedForTargetsFactory = Factory.define(
+  ({ params }) => {
+    const targets = params.targets || [
+      faker.string.uuid(),
+      faker.string.uuid(),
+    ];
+
+    const expectations = params.expectations || [];
+
+    const checkResults = params.check_id
+      ? params.check_id.map((checkID) =>
+          checkResultFactory.build({
+            agents_check_results: targets.map(checkResultForTarget),
+            check_id: checkID,
+          })
+        )
+      : checkResultFactory.buildList(2, {
+          agents_check_results: targets.map(checkResultForTarget),
+        });
+
+    const checkResultsWithExpectations = checkResults.map((checkResult) =>
+      expectations.reduce(
+        (acc, expectation) =>
+          addExpectation(acc, expectation.name, expectation, resultEnum()),
+        checkResult
+      )
+    );
+
+    return checksExecutionCompletedFactory.build({
+      check_results: checkResultsWithExpectations,
+    });
+  }
+);
 
 export const agentsCheckResultsWithHostname = (
   agentsCheckResults,

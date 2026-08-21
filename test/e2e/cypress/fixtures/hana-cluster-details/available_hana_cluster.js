@@ -1,6 +1,10 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 export const availableHanaCluster = {
   id: '469e7be5-4e20-5007-b044-c6f540a87493',
   name: 'hana_cluster_3',
+  health: 'passing',
   sid: 'HDP',
   systemID: '6c9208eb-a5bb-57ef-be5c-6422dedab602',
   clusterType: 'HANA Scale Up',
@@ -11,8 +15,16 @@ export const availableHanaCluster = {
   maintenanceMode: false,
   hanaSecondarySyncState: 'SOK',
   sapHanaSRHealthState: 4,
-  cibLastWritten: 'Tue Jan 25 15:36:59 2022',
+  cibLastWritten: '25 Jan 2022, 15:36:59',
   hanaSystemReplicationOperationMode: 'logreplay',
+  hosts: [
+    {
+      id: '9cd46919-5f19-59aa-993e-cf3736c71053',
+    },
+    {
+      id: 'b767b3e9-e802-587e-a442-541d093b86b9',
+    },
+  ],
   sites: [
     {
       name: 'NBG',
@@ -240,12 +252,7 @@ export const availableHanaCluster = {
     {
       deviceName:
         '/dev/disk/by-id/scsi-SLIO-ORG_IBLOCK_8d286026-c3a6-4404-90ac-f2549b912345',
-      status: 'Unhealthy',
-    },
-    {
-      deviceName:
-        '/dev/disk/by-id/scsi-SLIO-ORG_IBLOCK_8d286026-c3a6-4404-90ac-f2549b954321',
-      status: 'Unhealthy',
+      status: 'Healthy',
     },
   ],
 };
@@ -266,7 +273,7 @@ export const availableHanaClusterCostOpt = {
   maintenanceMode: false,
   hanaSecondarySyncState: 'SOK',
   sapHanaSRHealthState: 4,
-  cibLastWritten: 'Mon Aug 26 14:52:19 2024',
+  cibLastWritten: '26 Aug 2024, 14:52:19',
   hanaSystemReplicationOperationMode: 'logreplay',
   hosts: [
     {
@@ -292,7 +299,7 @@ export const availableAngiCluster = {
   fencingType: 'external/sbd',
   maintenanceMode: false,
   hanaSecondarySyncState: 'SOK',
-  cibLastWritten: 'Mon Jun 10 13:03:57 2024',
+  cibLastWritten: '10 Jun 2024, 13:03:57',
   hanaSystemReplicationOperationMode: 'logreplay',
   hosts: [
     {

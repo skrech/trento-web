@@ -1,5 +1,8 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import { all, call, put, select, takeEvery } from 'redux-saga/effects';
-import { map, noop } from 'lodash';
+import { noop } from 'lodash';
 
 import {
   HOST_OPERATION,
@@ -116,8 +119,9 @@ export function* requestOperation({ payload }) {
     );
   } catch ({ response: { status, data } }) {
     if (status === 403) {
-      const errors = map(data.errors, 'detail');
-      yield put(setForbiddenOperation({ groupID, operation, errors }));
+      yield put(
+        setForbiddenOperation({ groupID, operation, errors: data.errors })
+      );
       return;
     }
 

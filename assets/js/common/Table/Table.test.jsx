@@ -1,14 +1,11 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 
 import { noop } from 'lodash';
-import {
-  screen,
-  fireEvent,
-  render,
-  waitFor,
-  within,
-} from '@testing-library/react';
-import 'intersection-observer';
+import { screen, render, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 import { faker } from '@faker-js/faker';
@@ -65,6 +62,35 @@ describe('Table component', () => {
       .getByRole('table')
       .querySelectorAll('tbody > tr')
       .forEach((tableRow) => expect(tableRow).toHaveClass(customRowClassName));
+  });
+
+  it('should allow dynamic row classes based on row content', () => {
+    const activeClass = 'bg-green-50';
+    const inactiveClass = 'bg-gray-50';
+    const data = tableDataFactory.buildList(10).map((item, index) => ({
+      ...item,
+      isActive: index % 2 === 0,
+    }));
+
+    render(
+      <Table
+        config={{
+          rowClassName: (item) => (item.isActive ? activeClass : inactiveClass),
+          ...tableConfig,
+        }}
+        data={data}
+        setSearchParams={() => {}}
+      />
+    );
+
+    const tableRows = screen.getByRole('table').querySelectorAll('tbody > tr');
+    tableRows.forEach((tableRow, index) => {
+      if (data[index].isActive) {
+        expect(tableRow).toHaveClass(activeClass);
+      } else {
+        expect(tableRow).toHaveClass(inactiveClass);
+      }
+    });
   });
 
   it('should display the header', () => {
@@ -131,6 +157,8 @@ describe('Table component', () => {
 
   describe('filtering', () => {
     it('should filter by the chosen filter option with default filter', async () => {
+      const user = userEvent.setup();
+
       const data = tableDataFactory.buildList(10);
       const { column1: value1 } = data[0];
 
@@ -138,7 +166,7 @@ describe('Table component', () => {
         <Table config={tableConfig} data={data} setSearchParams={() => {}} />
       );
 
-      filterTable('Column1', value1);
+      await filterTable(user, 'Column1', value1);
 
       await waitFor(() => {
         const table = screen.getByRole('table');
@@ -147,6 +175,8 @@ describe('Table component', () => {
     });
 
     it('should filter by the chosen filter option with custom filter', async () => {
+      const user = userEvent.setup();
+
       const data = [].concat(
         tableDataFactory.buildList(5),
         tableDataFactory.buildList(1, { column2: ['value1'] }),
@@ -158,8 +188,8 @@ describe('Table component', () => {
         <Table config={tableConfig} data={data} setSearchParams={() => {}} />
       );
 
-      filterTable('Column2', 'value1');
-      filterTable('Column2', 'value2');
+      await filterTable(user, 'Column2', 'value1');
+      await filterTable(user, 'Column2', 'value2');
 
       await waitFor(() => {
         const table = screen.getByRole('table');
@@ -168,6 +198,7 @@ describe('Table component', () => {
     });
 
     it('should reset the pagination and go the 1st page when a filter is selected', async () => {
+      const user = userEvent.setup();
       const data = [].concat(
         tableDataFactory.buildList(15),
         tableDataFactory.buildList(1, { column3: 'value3' })
@@ -179,9 +210,9 @@ describe('Table component', () => {
 
       const pages = screen.getByTestId('pagination');
       const page2Button = within(pages).getByLabelText('next-page');
-      fireEvent.click(page2Button);
+      await user.click(page2Button);
 
-      filterTable('Column3', 'value3');
+      await filterTable(user, 'Column3', 'value3');
 
       await waitFor(() => {
         const table = screen.getByRole('table');
@@ -189,7 +220,8 @@ describe('Table component', () => {
       });
     });
 
-    it('should display the correct items per page', () => {
+    it('should display the correct items per page', async () => {
+      const user = userEvent.setup();
       const data = tableDataFactory.buildList(11);
 
       render(
@@ -201,13 +233,14 @@ describe('Table component', () => {
 
       const pages = screen.getByTestId('pagination');
       const page2Button = within(pages).getByLabelText('next-page');
-      fireEvent.click(page2Button);
+      await user.click(page2Button);
 
       const page2 = screen.getByRole('table');
       expect(page2.querySelectorAll('tbody > tr')).toHaveLength(1);
     });
 
-    it('should be able to change the items per page', () => {
+    it('should be able to change the items per page', async () => {
+      const user = userEvent.setup();
       const data = tableDataFactory.buildList(11);
 
       render(
@@ -217,14 +250,46 @@ describe('Table component', () => {
       const pageOriginal = screen.getByRole('table');
       expect(pageOriginal.querySelectorAll('tbody > tr')).toHaveLength(10);
 
-      fireEvent.click(screen.getByRole('button', { name: '10' }));
-      fireEvent.click(screen.getByRole('option', { name: '20' }));
+      await user.click(screen.getByRole('combobox', { name: 'per-page' }));
+      await user.click(screen.getByRole('option', { name: '20' }));
 
       const pageMoreItems = screen.getByRole('table');
       expect(pageMoreItems.querySelectorAll('tbody > tr')).toHaveLength(11);
 
       const pages = screen.getByTestId('pagination');
       expect(within(pages).queryByText('2')).toBeNull();
+    });
+
+    it('should sort filter options with filterOptionsSorter when provided', async () => {
+      const user = userEvent.setup();
+      const data = [
+        { column1: 'zeta', column2: [], column3: 'c' },
+        { column1: 'alpha', column2: [], column3: 'c' },
+        { column1: 'mike', column2: [], column3: 'c' },
+      ];
+
+      const sortedConfig = {
+        ...tableConfig,
+        columns: tableConfig.columns.map((c) =>
+          c.key === 'column1'
+            ? { ...c, filterOptionsSorter: (a, b) => a.localeCompare(b) }
+            : c
+        ),
+      };
+
+      render(
+        <Table config={sortedConfig} data={data} setSearchParams={() => {}} />
+      );
+
+      await user.click(screen.getByTestId('filter-Column1'));
+
+      const labels = Array.from(
+        screen
+          .getByTestId('filter-Column1-options')
+          .querySelectorAll('li > div > span')
+      ).map((span) => span.textContent);
+
+      expect(labels).toEqual(['alpha', 'mike', 'zeta']);
     });
 
     it('should return empty state message when data is empty', () => {
@@ -327,6 +392,7 @@ describe('Table component', () => {
 
   describe('collapsible row', () => {
     it('should display the collapsed row when chevron is clicked', async () => {
+      const user = userEvent.setup();
       const data = tableDataFactory.buildList(1);
       const content = 'This is a collapsible row data';
 
@@ -346,7 +412,7 @@ describe('Table component', () => {
       );
       expect(screen.queryByText(content)).not.toBeVisible();
 
-      fireEvent.click(collapsibleCell);
+      await user.click(collapsibleCell);
       expect(screen.queryByText(content)).toBeVisible();
     });
 

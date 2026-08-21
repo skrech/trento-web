@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 export const healthMap = {
   Green: 'fill-jungle-green-500',
   Yellow: 'fill-yellow-500',
@@ -7,47 +10,63 @@ export const healthMap = {
 
 export const selectedSystem = {
   Id: '67b247e4-ab5b-5094-993a-a4fd70d0e8d1',
+  Health: 'passing',
   Sid: 'NWD',
-  Type: 'Application server',
+  Type: 'ABAP',
+  EnsaVersion: 'ENSA1',
+  Database: 'HDD',
+  DatabaseHealth: 'passing',
+  DatabaseTenant: 'HDD',
   Hosts: [
     {
+      Status: 'Green',
       Hostname: 'sapnwdas',
       Instance: '00',
       Features: 'MESSAGESERVER|ENQUE',
       HttpPort: '50013',
       HttpsPort: '50014',
       StartPriority: '1',
-      Status: 'Green',
     },
     {
+      Status: 'Green',
       Hostname: 'sapnwdpas',
       Instance: '01',
       Features: 'ABAP|GATEWAY|ICMAN|IGS',
       HttpPort: '50113',
       HttpsPort: '50114',
       StartPriority: '3',
-      Status: 'Green',
     },
     {
+      Status: 'Green',
       Hostname: 'sapnwdaas1',
       Instance: '02',
       Features: 'ABAP|GATEWAY|ICMAN|IGS',
       HttpPort: '50213',
       HttpsPort: '50214',
       StartPriority: '3',
-      Status: 'Green',
     },
     {
+      Status: 'Green',
       Hostname: 'sapnwder',
       Instance: '10',
       Features: 'ENQREP',
       HttpPort: '51013',
       HttpsPort: '51014',
       StartPriority: '0.5',
-      Status: 'Green',
     },
   ],
 };
+
+export const attachedDatabaseInstances = [
+  {
+    Instance: '10',
+    AgentId: '13e8c25c-3180-5a9a-95c8-51ec38e50cfc',
+  },
+  {
+    Instance: '10',
+    AgentId: '0a055c90-4cb6-54ce-ac9c-ae3fedaf40d4',
+  },
+];
 
 export const attachedHosts = [
   {
@@ -56,6 +75,7 @@ export const attachedHosts = [
     Addresses: ['10.100.1.21', '10.100.1.25'],
     Provider: 'Azure',
     Cluster: 'netweaver_cluster',
+    ClusterId: '5284f376-c1f4-5178-8966-d490df3dab4f',
     Version: '2.1.0',
   },
   {
@@ -64,6 +84,7 @@ export const attachedHosts = [
     Addresses: ['10.100.1.23', '10.100.1.27'],
     Provider: 'Azure',
     Cluster: '',
+    ClusterId: '',
     Version: '2.1.0',
   },
   {
@@ -72,6 +93,7 @@ export const attachedHosts = [
     Addresses: ['10.100.1.24', '10.100.1.28'],
     Provider: 'Azure',
     Cluster: '',
+    ClusterId: '',
     Version: '2.1.0',
   },
   {
@@ -80,6 +102,7 @@ export const attachedHosts = [
     Addresses: ['10.100.1.22', '10.100.1.26'],
     Provider: 'Azure',
     Cluster: 'netweaver_cluster',
+    ClusterId: '5284f376-c1f4-5178-8966-d490df3dab4f',
     Version: '2.1.0',
   },
 ];

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -14,7 +17,7 @@ describe('Banner', () => {
       </Banner>
     );
 
-    expect(screen.getByTestId('banner')).toHaveTextContent(
+    expect(screen.getByRole('alert', { name: /Warning/ })).toHaveTextContent(
       'You should have a look on this!'
     );
   });

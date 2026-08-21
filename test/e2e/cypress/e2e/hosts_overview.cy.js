@@ -1,4 +1,8 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import * as hostsOverviewPage from '../pageObject/hosts_overview_po';
+import { availableHosts } from '../fixtures/hosts-overview/available_hosts';
 
 context('Hosts Overview', () => {
   before(() => hostsOverviewPage.preloadTestData());
@@ -15,7 +19,7 @@ context('Hosts Overview', () => {
     });
 
     it('should show 10 of the 27 registered hosts', () => {
-      hostsOverviewPage.tenHostsAreListed();
+      hostsOverviewPage.hostsListedAre(10);
     });
 
     it('should have 3 pages', () => {
@@ -49,21 +53,21 @@ context('Hosts Overview', () => {
       beforeEach(() => hostsOverviewPage.startAgentsHeartbeat());
 
       it('should show health status of the entire cluster of 27 hosts with partial pagination', () => {
-        hostsOverviewPage.expectedPassingHostsAreDisplayed(11);
-        hostsOverviewPage.expectedWarningHostsAreDisplayed(12);
-        hostsOverviewPage.expectedCriticalHostsAreDisplayed(4);
+        hostsOverviewPage.expectedPassingHostCountIsDisplayed(11);
+        hostsOverviewPage.expectedWarningHostCountIsDisplayed(12);
+        hostsOverviewPage.expectedCriticalHostCountIsDisplayed(4);
       });
 
       it('should show the correct health on the hosts when the agents are sending the heartbeat', () => {
-        hostsOverviewPage.expectedAmountOfPassingIsDisplayed(8);
-        hostsOverviewPage.expectedAmountOfWarningsIsDisplayed(2);
+        hostsOverviewPage.expectedAmountOfPassingIconsIsDisplayed(8);
+        hostsOverviewPage.expectedAmountOfWarningIconsIsDisplayed(2);
       });
 
       afterEach(() => hostsOverviewPage.stopAgentsHeartbeat());
     });
 
     describe('Health is changed based on saptune status', () => {
-      beforeEach(() => hostsOverviewPage.startAgentsHeartbeat());
+      before(() => hostsOverviewPage.startAgentsHeartbeat());
 
       it('should not change the health if saptune is not installed and a SAP workload is not running', () => {
         hostsOverviewPage.loadHostWithoutSaptune();
@@ -99,33 +103,35 @@ context('Hosts Overview', () => {
         hostsOverviewPage.loadHostWithSaptuneScenario('compliant');
         hostsOverviewPage.hostWithSaptuneCompliantHasExpectedStatus();
       });
-
-      afterEach(() => hostsOverviewPage.stopAgentsHeartbeat());
     });
 
-    describe('Health is changed to critical when the heartbeat is not sent', () => {
-      beforeEach(() => hostsOverviewPage.startAgentsHeartbeat());
+    describe('Stale', () => {
+      it('should show a stale health on the hosts when agents are not sending heartbeat', () => {
+        hostsOverviewPage.startAgentsHeartbeat();
+        hostsOverviewPage.expectedAmountOfStaleIconsIsDisplayed(0);
 
-      it('should show health status of the entire cluster of 27 hosts with critical health', () => {
-        hostsOverviewPage.expectedCriticalHostsAreDisplayed(4);
         hostsOverviewPage.stopAgentsHeartbeat();
-        hostsOverviewPage.expectedCriticalHostsAreDisplayed(27);
+        hostsOverviewPage.expectedAmountOfStaleIconsIsDisplayed(10);
+        hostsOverviewPage.allVisibleRowsAreMarkedStale();
       });
 
-      it('should show a critical health on the hosts when the agents are not sending the heartbeat', () => {
-        hostsOverviewPage.expectedAmountOfCriticalsIsDisplayed(0);
+      it('should mark health in-sync on the hosts when agents start sending heartbeat again', () => {
         hostsOverviewPage.stopAgentsHeartbeat();
-        hostsOverviewPage.expectedAmountOfCriticalsIsDisplayed(10);
-      });
+        hostsOverviewPage.expectedAmountOfStaleIconsIsDisplayed(10);
 
-      afterEach(() => hostsOverviewPage.stopAgentsHeartbeat());
+        hostsOverviewPage.startAgentsHeartbeat();
+        hostsOverviewPage.expectedAmountOfStaleIconsIsDisplayed(0);
+        hostsOverviewPage.allVisibleRowsAreMarkedInSync();
+      });
     });
   });
 
   describe('Deregistration', () => {
     describe('Clean-up buttons should be visible only when needed', () => {
+      beforeEach(() => hostsOverviewPage.stopAgentsHeartbeat());
+
       it('should not display a clean-up button when heartbeat is sent', () => {
-        hostsOverviewPage.cleanupButtonIsDisplayedForHostSendingHeartbeat();
+        hostsOverviewPage.cleanupButtonIsDisplayedForHostNotSendingHeartbeat();
         hostsOverviewPage.startAgentHeartbeat();
         hostsOverviewPage.cleanupButtonIsNotDisplayedForHostSendingHeartbeat();
       });
@@ -135,8 +141,6 @@ context('Hosts Overview', () => {
         hostsOverviewPage.startAgentHeartbeat();
         hostsOverviewPage.expectedAmountOfCleanupButtonsIsDisplayed(9);
       });
-
-      afterEach(() => hostsOverviewPage.stopAgentsHeartbeat());
     });
 
     describe('Clean-up button should deregister a host', () => {
@@ -162,6 +166,8 @@ context('Hosts Overview', () => {
       describe('Deregistration of hosts should update remaining hosts data', () => {
         beforeEach(() => hostsOverviewPage.restoreSapSystem());
 
+        afterEach(() => hostsOverviewPage.restoreSapSystem());
+
         it('should remove the SAP system sid from hosts belonging the deregistered SAP system', () => {
           hostsOverviewPage.clickNextPageButton();
           hostsOverviewPage.sapSystemHasExpectedAmountOfHosts(4);
@@ -177,7 +183,7 @@ context('Hosts Overview', () => {
           hostsOverviewPage.sapSystemHasExpectedAmountOfHosts(3);
         });
 
-        after(() => hostsOverviewPage.restoreSapSystem());
+        afterEach(() => hostsOverviewPage.restoreSapSystem());
 
         it('should associate instances to the correct host during deregistration', () => {
           hostsOverviewPage.apiDeregisterMovedHost();
@@ -191,6 +197,91 @@ context('Hosts Overview', () => {
           hostsOverviewPage.initialHostNameIsNotDisplayed();
         });
       });
+    });
+  });
+
+  describe('Filter and browser navigation', () => {
+    const hostname = availableHosts[0].name;
+    const anotherHostname = availableHosts[1].name;
+    const anyPageUrl = '/any-page';
+
+    beforeEach(() => hostsOverviewPage.restoreSapSystem());
+
+    it('should update the URL with filter params when a filter is selected', () => {
+      hostsOverviewPage.visit();
+      hostsOverviewPage.selectHostnameFilter(hostname);
+      cy.url().should('contain', `hostname=${hostname}`);
+      hostsOverviewPage.hostsListedAre(1);
+    });
+
+    it('should preserve filters when coming back', () => {
+      hostsOverviewPage.visit();
+      hostsOverviewPage.selectHostnameFilter(hostname);
+      cy.url().should('contain', `hostname=${hostname}`);
+      hostsOverviewPage.hostsListedAre(1);
+
+      cy.visit(anyPageUrl);
+      cy.url().should('contain', anyPageUrl);
+
+      cy.go('back');
+
+      cy.url().should('contain', '/hosts');
+      cy.url().should('contain', `hostname=${hostname}`);
+      hostsOverviewPage.hostsListedAre(1);
+    });
+
+    it('should preserve filters when going forward', () => {
+      cy.visit(anyPageUrl);
+      cy.url().should('contain', anyPageUrl);
+
+      hostsOverviewPage.visit();
+      hostsOverviewPage.selectHostnameFilter(hostname);
+      cy.url().should('contain', `hostname=${hostname}`);
+      hostsOverviewPage.hostsListedAre(1);
+
+      cy.go('back');
+      cy.url().should('contain', anyPageUrl);
+
+      cy.go('forward');
+      cy.url().should('contain', '/hosts');
+      cy.url().should('contain', `hostname=${hostname}`);
+      hostsOverviewPage.hostsListedAre(1);
+    });
+
+    it('should allow navigating back to previous page', () => {
+      cy.visit(anyPageUrl);
+      cy.url().should('contain', anyPageUrl);
+
+      hostsOverviewPage.visit();
+      hostsOverviewPage.hostsListedAre(10);
+
+      hostsOverviewPage.selectHostnameFilter(hostname);
+      hostsOverviewPage.hostsListedAre(1);
+
+      cy.go('back');
+
+      cy.url().should('contain', anyPageUrl);
+    });
+
+    it('should render filtered results when visiting a URL with filter params', () => {
+      hostsOverviewPage.visit(`hostname=${hostname}`);
+      hostsOverviewPage.hostsListedAre(1);
+    });
+
+    it('should not produce duplicate history entries when filters are applied', () => {
+      cy.visit(anyPageUrl);
+      cy.url().should('contain', anyPageUrl);
+
+      hostsOverviewPage.visit();
+
+      hostsOverviewPage.selectHostnameFilter(hostname);
+      cy.url().should('contain', `hostname=${hostname}`);
+
+      hostsOverviewPage.selectHostnameFilter(anotherHostname);
+      cy.url().should('contain', `hostname=${anotherHostname}`);
+
+      cy.go('back');
+      cy.url().should('contain', anyPageUrl);
     });
   });
 

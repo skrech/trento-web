@@ -1,8 +1,12 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 name: Backend Flaky Tests Analysis
 
 on:
   schedule:
-    - cron: "0 1 * * *" # Runs every day at 1:00 AM UTC
+    - cron: "9 19 * * *" # Runs every day at 19:09 Europe/Madrid
+      timezone: "Europe/Madrid"
   workflow_dispatch:
     inputs:
       num_runs:
@@ -16,6 +20,8 @@ concurrency:
 env:
   MIX_ENV: test
   NUM_RUNS: ${{ github.event.inputs.num_runs || 50 }}
+  ELIXIR_BC: "1.15.7-otp-26"
+  ERLANG_BC: "26.2.1"
 
 jobs:
   setup-matrix:
@@ -29,14 +35,14 @@ jobs:
       total-runs: ${{ steps.compute-matrix.outputs.total-runs }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: gather versions
-        uses: endorama/asdf-parse-tool-versions@v1
+        uses: endorama/asdf-parse-tool-versions@e60863920ff5af9bf1c794ffbaaef91384b07eed # v1.6.0
       - name: Compute matrix
         id: compute-matrix
         run: |
-          echo "ELIXIR_BC=1.15.7-otp-26" >> $GITHUB_OUTPUT
-          echo "ERLANG_BC=26.2.1" >> $GITHUB_OUTPUT
+          echo "ELIXIR_BC=${{ env.ELIXIR_BC }}" >> $GITHUB_OUTPUT
+          echo "ERLANG_BC=${{ env.ERLANG_BC }}" >> $GITHUB_OUTPUT
           echo "ELIXIR_DEV=${{ env.ELIXIR_VERSION }}" >> $GITHUB_OUTPUT
           echo "ERLANG_DEV=${{ env.ERLANG_VERSION }}" >> $GITHUB_OUTPUT
           echo "run_range=[$(seq -s, 1 ${{ env.NUM_RUNS }})]" >> $GITHUB_OUTPUT
@@ -55,24 +61,24 @@ jobs:
             otp: ${{ needs.setup-matrix.outputs.ERLANG_DEV }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Setup
         id: setup-elixir
-        uses: erlef/setup-beam@v1
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1
         with:
           otp-version: ${{ matrix.otp }}
           elixir-version: ${{ matrix.elixir }}
       - name: Retrieve Elixir Cached Dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v5
         id: mix-cache
         with:
           path: |
             deps
             _build/${{ env.MIX_ENV }}
             priv/plts
-          key: erlang-${{ steps.setup-elixir.outputs.otp-version }}-elixir-${{ steps.setup-elixir.outputs.elixir-version }}-${{ hashFiles('mix.lock') }}-${{ env.MIX_ENV }}
+          key: erlang-${{ matrix.otp }}-elixir-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}-${{ env.MIX_ENV }}
       - name: Install Dependencies
         if: steps.mix-cache.outputs.cache-hit != 'true'
         run: |
@@ -102,28 +108,28 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Setup
         id: setup-elixir
-        uses: erlef/setup-beam@v1
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1
         with:
           otp-version: ${{ matrix.otp }}
           elixir-version: ${{ matrix.elixir }}
       - name: Retrieve Elixir Cached Dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v5
         id: mix-cache
         with:
           path: |
             deps
             _build/${{ env.MIX_ENV }}
             priv/plts
-          key: erlang-${{ steps.setup-elixir.outputs.otp-version }}-elixir-${{ steps.setup-elixir.outputs.elixir-version }}-${{ hashFiles('mix.lock') }}-${{ env.MIX_ENV }}
+          key: erlang-${{ matrix.otp }}-elixir-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}-${{ env.MIX_ENV }}
       - name: Compile
         run: mix compile --warnings-as-errors
       - name: "Docker compose dependencies"
-        uses: isbang/compose-action@v2.5.0
+        uses: isbang/compose-action@11beaa1c2dae4e8ed7b1665aa074723b6cecb0e4 # v3.0.0
         with:
           compose-file: "./docker-compose.yaml"
           down-flags: "--volumes"
@@ -144,7 +150,7 @@ jobs:
           done
       - name: Upload backend test junit reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: backend-junit-reports-elixir${{ matrix.elixir }}-run${{ matrix.run }}
           path: junit-reports/*.xml
@@ -166,3 +172,5 @@ jobs:
       suite-name: ${{ matrix.suite-name }}
       junit-artifact-pattern: ${{ matrix.junit-artifact-pattern }}
       total-runs: ${{ needs.setup-matrix.outputs.total-runs }}
+    secrets:
+      SLACK_FLAKY_TESTS_ALERT_WEBHOOK_URL: ${{ secrets.SLACK_FLAKY_TESTS_ALERT_WEBHOOK_URL }}

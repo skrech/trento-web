@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule TestEventHandlerWithFailureContext do
   @moduledoc """
   This module defines an event handler that fails.
@@ -8,9 +11,9 @@ defmodule TestEventHandlerWithFailureContext do
     name: __MODULE__
 
   use Trento.Support.EventHandlerFailureContext,
-    max_retry: 1,
+    max_retries: 3,
     retry_after: 1,
-    skip: true,
+    skip: false,
     after_retry: fn _, %{reply_to: reply_to}, %{failures: failures} ->
       send(reply_to, {:retry, failures})
 

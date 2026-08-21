@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.ActivityLog.Logger.Parser.PhoenixConnParser do
   @moduledoc """
   Phoenix connection activity parser
@@ -262,6 +265,16 @@ defmodule Trento.ActivityLog.Logger.Parser.PhoenixConnParser do
     }
     |> Map.put(get_operation_resource_id_field(activity), Map.get(params, :id))
     |> maybe_add_additional_fields(activity, conn)
+  end
+
+  def get_activity_metadata(
+        action,
+        %Plug.Conn{
+          body_params: request_body
+        }
+      )
+      when action in [:ai_configuration_creation, :ai_configuration_modification] do
+    redact(request_body, :api_key)
   end
 
   def get_activity_metadata(_, _), do: %{}

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 // ***********************************************************
 // This example support/index.js is processed and
 // loaded automatically before your test files.
@@ -13,7 +16,8 @@
 // https://on.cypress.io/configuration
 // ***********************************************************
 
-// import 'cypress-localstorage-commands';
+// Enable Testing Library plugin for Cypress
+import '@testing-library/cypress/add-commands';
 
 // Import commands.js using ES2015 syntax:
 import { apiLoginAndCreateSession } from '../pageObject/base_po';
@@ -25,7 +29,5 @@ import { apiLoginAndCreateSession } from '../pageObject/base_po';
 // eslint-disable-next-line mocha/no-top-level-hooks
 before(() => {
   Cypress.session.clearAllSavedSessions();
-  if (!Cypress.env('SSO_INTEGRATION_TESTS')) {
-    apiLoginAndCreateSession();
-  }
+  if (!Cypress.expose('SSO_INTEGRATION_TESTS')) apiLoginAndCreateSession();
 });

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 export const EXPECT = 'expect';
 export const EXPECT_ENUM = 'expect_enum';
 export const EXPECT_SAME = 'expect_same';
@@ -15,6 +18,7 @@ export const isValidTargetType = (targetType) =>
 export const PASSING = 'passing';
 export const WARNING = 'warning';
 export const CRITICAL = 'critical';
+export const EXCLUDED = 'excluded';
 
 export const AWS_PROVIDER = 'aws';
 export const AZURE_PROVIDER = 'azure';

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule TrentoWeb.V2.ClusterJSON do
   alias Trento.Clusters.ValueObjects.SapInstance
 
@@ -27,6 +30,9 @@ defmodule TrentoWeb.V2.ClusterJSON do
 
   def cluster_health_changed(%{cluster: %{id: id, name: name, health: health}}),
     do: %{cluster_id: id, name: name, health: health}
+
+  def cluster_stale_changed(%{cluster: %{id: id, stale_at: stale_at}}),
+    do: %{id: id, stale_at: stale_at}
 
   defp adapt_sids(%{sap_instances: sap_instances} = cluster) do
     adapted_sap_instances =
@@ -74,6 +80,8 @@ defmodule TrentoWeb.V2.ClusterJSON do
   end
 
   defp remove_sid_from_resources(resources) do
-    Enum.map(resources, &Map.drop(&1, [:sid]))
+    # Cannot use Map.from_struct to remove __struct__
+    # as the object can be loaded from the db already as map
+    Enum.map(resources, &Map.drop(&1, [:__struct__, :sid]))
   end
 end

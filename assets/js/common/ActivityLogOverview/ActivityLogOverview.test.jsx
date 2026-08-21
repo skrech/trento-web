@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 import { faker } from '@faker-js/faker';
 import '@testing-library/jest-dom';
@@ -209,5 +212,30 @@ describe('Activity Log Overview', () => {
     expect(screen.getByText('Activity Details')).toBeVisible();
     expect(screen.getByText('ID')).toBeVisible();
     expect(screen.getByText(id)).toBeVisible();
+  });
+
+  it('should render entry time in the provided timezone', () => {
+    const entry = activityLogEntryFactory.build({
+      occurred_on: '2024-01-10T23:30:00Z',
+    });
+
+    render(
+      <ActivityLogOverview
+        activityLog={[entry]}
+        timezone="Pacific/Kiritimati"
+      />
+    );
+
+    expect(screen.getByText('11 Jan 2024, 13:30:00')).toBeVisible();
+  });
+
+  it('should render entry time in an extreme negative-offset timezone', () => {
+    const entry = activityLogEntryFactory.build({
+      occurred_on: '2024-01-10T08:30:00Z',
+    });
+
+    render(<ActivityLogOverview activityLog={[entry]} timezone="Etc/GMT+12" />);
+
+    expect(screen.getByText('09 Jan 2024, 20:30:00')).toBeVisible();
   });
 });

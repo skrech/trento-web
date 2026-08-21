@@ -1,6 +1,10 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule TrentoWeb.V1.UsersController do
   use TrentoWeb, :controller
   use OpenApiSpex.ControllerSpecs
+  use Trento.AI.ControllerSpecs
 
   alias Trento.Infrastructure.SSO
   alias Trento.PersonalAccessTokens
@@ -88,6 +92,8 @@ defmodule TrentoWeb.V1.UsersController do
          "application/json", UserCollection}
     ]
 
+  ai_tool :users_list, display_text: "List users"
+
   def index(conn, _params) do
     users = Users.list_users()
     render(conn, :index, users: users)
@@ -146,6 +152,8 @@ defmodule TrentoWeb.V1.UsersController do
       not_found: Schema.NotFound.response(),
       unprocessable_entity: Schema.UnprocessableEntity.response()
     ]
+
+  ai_tool :users_show, display_text: "Get a user by id"
 
   def show(conn, %{id: id}) do
     with {:ok, user} <- Users.get_user(id),
@@ -272,7 +280,9 @@ defmodule TrentoWeb.V1.UsersController do
     put_resp_header(conn, "etag", Integer.to_string(lock_version))
   end
 
-  # when sso is enabled, we only allow abilities and enabled as parameters
-  defp clean_params_for_sso_integration(attrs, true), do: Map.take(attrs, [:abilities, :enabled])
+  # when sso is enabled, we only allow abilities, enabled and timezone as parameters
+  defp clean_params_for_sso_integration(attrs, true),
+    do: Map.take(attrs, [:abilities, :enabled, :timezone])
+
   defp clean_params_for_sso_integration(attrs, _), do: attrs
 end

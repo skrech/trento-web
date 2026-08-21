@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 Mox.defmock(Trento.Commanded.Mock, for: Commanded.Application)
 
 Application.put_env(:trento, Trento.Commanded, adapter: Trento.Commanded.Mock)
@@ -8,9 +11,7 @@ Application.put_env(:trento, Trento.Infrastructure.Prometheus,
   adapter: Trento.Infrastructure.Prometheus.Mock
 )
 
-Mox.defmock(Trento.Infrastructure.Prometheus.Adapter.HttpClient.Mock,
-  for: Trento.Infrastructure.Prometheus.Adapter.HttpClient
-)
+Mox.defmock(Trento.Support.HttpClient.Mock, for: Trento.Support.HttpClient)
 
 Mox.defmock(Trento.Infrastructure.SoftwareUpdates.Suma.HttpExecutor.Mock,
   for: Trento.Infrastructure.SoftwareUpdates.Suma.HttpExecutor
@@ -46,12 +47,51 @@ Application.put_env(
   adapter: Trento.Infrastructure.Messaging.Adapter.Mock
 )
 
+Mox.defmock(Trento.Infrastructure.ComponentVersions.Mock,
+  for: Trento.Infrastructure.ComponentVersions.Gen
+)
+
+Application.put_env(:trento, :component_versions,
+  adapter: Trento.Infrastructure.ComponentVersions.Mock
+)
+
 Mox.defmock(GenRMQ.Processor.Mock, for: GenRMQ.Processor)
 
 Mox.defmock(Trento.Support.DateService.Mock, for: Trento.Support.DateService)
 
 Mox.defmock(Joken.CurrentTime.Mock, for: Joken.CurrentTime)
 Application.put_env(:joken, :current_time_adapter, Joken.CurrentTime.Mock)
+
+Mox.defmock(Trento.AI.ApplicationConfigLoader.Mock,
+  for: Trento.AI.ApplicationConfigLoader
+)
+
+Mox.defmock(Trento.AI.Agent.Server.Mock,
+  for: Trento.AI.Agent.Server
+)
+
+Mox.defmock(Trento.AI.Agent.Supervisor.Mock,
+  for: Trento.AI.Agent.Supervisor
+)
+
+# Deliberately NOT wired into `test_ai_config` below — the real
+# `PubSubConfigurationEvents` stays the default so the config-events tests keep
+# their real PubSub round-trips.
+# Override in tests that need failure
+Mox.defmock(Trento.AI.Configurations.Events.Mock,
+  for: Trento.AI.Configurations.Events
+)
+
+default_ai_config = Application.get_env(:trento, :ai, [])
+
+test_ai_config = [
+  application_config_loader: Trento.AI.ApplicationConfigLoader.Mock,
+  agent_server_adapter: Trento.AI.Agent.Server.Mock,
+  agent_supervisor_adapter: Trento.AI.Agent.Supervisor.Mock,
+  http_client: Trento.Support.HttpClient.Mock
+]
+
+Application.put_env(:trento, :ai, Keyword.merge(default_ai_config, test_ai_config))
 
 Application.ensure_all_started(:ex_machina, :faker)
 

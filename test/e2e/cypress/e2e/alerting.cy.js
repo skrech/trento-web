@@ -1,12 +1,15 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import * as alertingPage from '../pageObject/alerting_po';
 
 context('Email Alerting feature', () => {
   before(function () {
-    if (!Cypress.env('ALERTING_TESTS')) {
+    if (!Cypress.expose('ALERTING_TESTS')) {
       this.skip();
     }
-    alertingPage.deleteAllEmailsFromMailpit();
     alertingPage.preloadTestData();
+    alertingPage.deleteAllEmailsFromMailpit();
     alertingPage.getAlertingSettings().then((resp) => {
       if (resp.status === 404 || resp.body.enforced_from_env === false) {
         const requestMethod = resp.status === 404 ? 'POST' : 'PATCH';
@@ -34,6 +37,11 @@ context('Email Alerting feature', () => {
     it('Receive email when Database health goes critical', () => {
       alertingPage.triggerDatabaseAlertingEmail();
       alertingPage.emailIsReceived('database');
+    });
+
+    it('Receive email when the host heartbeat fails', () => {
+      alertingPage.triggerHeartbeatFailedAlertingEmail();
+      alertingPage.heartbeatFailedEmailIsReceived();
     });
   });
 

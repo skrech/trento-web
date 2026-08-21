@@ -1,6 +1,10 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useSelector, useDispatch } from 'react-redux';
+import { getUserProfile } from '@state/selectors/user';
 
 import BackButton from '@common/BackButton';
 
@@ -24,6 +28,8 @@ export default function Page() {
     getSoftwareUpdatesPatches(state, hostID)
   );
 
+  const { timezone } = useSelector(getUserProfile);
+
   if (!host || !patches) {
     return <div>Retrieving data</div>;
   }
@@ -39,6 +45,7 @@ export default function Page() {
         onNavigate={(advisoryID) =>
           navigate(`/hosts/${hostID}/patches/${advisoryID}`)
         }
+        timezone={timezone}
       />
     </>
   );

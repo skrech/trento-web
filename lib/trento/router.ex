@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Router do
   use Commanded.Commands.Router
 
@@ -6,6 +9,7 @@ defmodule Trento.Router do
   alias Trento.Clusters.Commands.{
     CompleteChecksExecution,
     DeregisterClusterHost,
+    MarkClusterHostStale,
     RegisterOfflineClusterHost,
     RegisterOnlineClusterHost,
     RollUpCluster,
@@ -30,6 +34,7 @@ defmodule Trento.Router do
   alias Trento.Databases.Commands.{
     DeregisterDatabaseInstance,
     MarkDatabaseInstanceAbsent,
+    MarkDatabaseInstanceDataStale,
     RegisterDatabaseInstance,
     RollUpDatabase
   }
@@ -38,10 +43,12 @@ defmodule Trento.Router do
     DeregisterApplicationInstance,
     DeregisterSapSystem,
     MarkApplicationInstanceAbsent,
+    MarkApplicationInstanceDataStale,
     RegisterApplicationInstance,
     RestoreSapSystem,
     RollUpSapSystem,
-    UpdateDatabaseHealth
+    UpdateDatabaseHealth,
+    UpdateDatabaseStaleAt
   }
 
   alias Trento.Clusters
@@ -75,6 +82,7 @@ defmodule Trento.Router do
 
   dispatch [
              DeregisterClusterHost,
+             MarkClusterHostStale,
              RollUpCluster,
              RegisterOfflineClusterHost,
              RegisterOnlineClusterHost,
@@ -91,9 +99,11 @@ defmodule Trento.Router do
              DeregisterSapSystem,
              RestoreSapSystem,
              MarkApplicationInstanceAbsent,
+             MarkApplicationInstanceDataStale,
              RegisterApplicationInstance,
              RollUpSapSystem,
-             UpdateDatabaseHealth
+             UpdateDatabaseHealth,
+             UpdateDatabaseStaleAt
            ],
            to: SapSystems.SapSystem,
            lifespan: SapSystems.Lifespan
@@ -103,6 +113,7 @@ defmodule Trento.Router do
   dispatch [
              DeregisterDatabaseInstance,
              MarkDatabaseInstanceAbsent,
+             MarkDatabaseInstanceDataStale,
              RegisterDatabaseInstance,
              RollUpDatabase
            ],

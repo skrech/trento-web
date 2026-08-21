@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Operations.ApplicationInstancePolicy do
   @moduledoc """
   ApplicationInstanceReadModel operation policies
@@ -6,6 +9,7 @@ defmodule Trento.Operations.ApplicationInstancePolicy do
   @behaviour Trento.Operations.PolicyBehaviour
 
   require Trento.Operations.Enums.SapInstanceOperations, as: SapInstanceOperations
+  require Trento.SapSystems.Enums.Status, as: Status
 
   alias Trento.Support.OperationsHelper
 
@@ -55,7 +59,7 @@ defmodule Trento.Operations.ApplicationInstancePolicy do
       do:
         {:error,
          [
-           "Trento agent is not currently running in the host"
+           OperationsHelper.build_error("Trento agent is not currently running in the host")
          ]}
 
   # instance start operation authorized when:
@@ -88,7 +92,8 @@ defmodule Trento.Operations.ApplicationInstancePolicy do
     ])
   end
 
-  def authorize_operation(_, _, _), do: {:error, ["Unknown operation"]}
+  def authorize_operation(_, _, _),
+    do: {:error, [OperationsHelper.build_error("Unknown operation")]}
 
   # Message Server, start without depending on other instances
   defp other_instances_started(%ApplicationInstanceReadModel{
@@ -114,14 +119,26 @@ defmodule Trento.Operations.ApplicationInstancePolicy do
       end)
 
     case message_server_instance do
-      %{health: :passing} ->
+      %{status: Status.green()} ->
         :ok
 
       %{instance_number: msg_instance_number} ->
-        {:error, ["Message server #{msg_instance_number} of SAP system #{sid} is not started"]}
+        {:error,
+         [
+           OperationsHelper.build_error(
+             "Message server #{msg_instance_number} of SAP system #{sid} is not started",
+             []
+           )
+         ]}
 
       nil ->
-        {:error, ["Message server not found in SAP system #{sid}"]}
+        {:error,
+         [
+           OperationsHelper.build_error(
+             "Message server not found in SAP system #{sid}",
+             []
+           )
+         ]}
     end
   end
 
@@ -142,11 +159,19 @@ defmodule Trento.Operations.ApplicationInstancePolicy do
   defp database_started(%ApplicationInstanceReadModel{
          sap_system: %{
            database: %{
+             id: database_id,
              sid: sid
            }
          }
        }),
-       do: {:error, ["Database #{sid} is not started"]}
+       do:
+         {:error,
+          [
+            OperationsHelper.build_error(
+              "Database {0} is not started",
+              [%{id: database_id, label: sid, type: :database}]
+            )
+          ]}
 
   # Message server, stop only if the other instances are stopped
   defp other_instances_stopped(%ApplicationInstanceReadModel{
@@ -160,8 +185,8 @@ defmodule Trento.Operations.ApplicationInstancePolicy do
        }) do
     instances
     |> reject_current_instance(host_id, instance_number)
-    |> Enum.filter(fn %{health: health} ->
-      health != :unknown
+    |> Enum.filter(fn %{status: status} ->
+      status != Status.gray()
     end)
     |> case do
       [] ->
@@ -170,7 +195,10 @@ defmodule Trento.Operations.ApplicationInstancePolicy do
       running_instances ->
         {:error,
          Enum.map(running_instances, fn %{instance_number: inst_number} ->
-           "Instance #{inst_number} of SAP system #{sid} is not stopped"
+           OperationsHelper.build_error(
+             "Instance #{inst_number} of SAP system #{sid} is not stopped",
+             []
+           )
          end)}
     end
   end

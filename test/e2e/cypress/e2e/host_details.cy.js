@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import * as hostDetailsPage from '../pageObject/host_details_po';
 
 import { selectedHost } from '../fixtures/host-details/selected_host';
@@ -27,6 +30,10 @@ context('Host Details', () => {
 
     it('should highlight the hosts sidebar entry', () => {
       hostDetailsPage.hostNavigationItemIsHighlighted();
+    });
+
+    it('should show the correct host health', () => {
+      hostDetailsPage.pageTitleHealthIsCorrectlyDisplayed();
     });
 
     it('should show the correct cluster', () => {
@@ -136,6 +143,10 @@ context('Host Details', () => {
     it('should show SAP instance data', () => {
       hostDetailsPage.sapSystemsTableDisplaysExpectedData();
     });
+
+    it('should have a correct link to the SAP system', () => {
+      hostDetailsPage.sapSystemHasTheExpectedLink();
+    });
   });
 
   describe('SLES subscriptions details for this host should be displayed', () => {
@@ -146,18 +157,21 @@ context('Host Details', () => {
     });
   });
 
-  describe("Trento agent status should be 'running'", () => {
+  describe("Trento agent status should be 'Reporting'", () => {
     beforeEach(() => hostDetailsPage.visitSelectedHost());
 
-    it("should show the status as 'running'", () => {
-      hostDetailsPage.agentStatusIsCorrectlyDisplayed();
+    it("should show the status as 'Reporting'", () => {
+      hostDetailsPage.agentStatusIsReporting();
     });
   });
 
-  describe("Node exporter status should be 'running'", () => {
-    beforeEach(() => hostDetailsPage.visitSelectedHost());
+  describe("Node exporter status should be 'Reporting'", () => {
+    beforeEach(() => {
+      hostDetailsPage.interceptNodeExporterStatusMockedForProdInstance();
+      hostDetailsPage.visitSelectedHost();
+    });
 
-    it("should show the status as 'running'", () => {
+    it("should show the status as 'Reporting'", () => {
       hostDetailsPage.nodeExporterStatusIsCorrectlyDisplayed();
     });
   });
@@ -182,6 +196,34 @@ context('Host Details', () => {
     });
   });
 
+  describe('Stale data', () => {
+    before(() => {
+      hostDetailsPage.startAgentHeartbeat();
+      hostDetailsPage.visitSelectedHost();
+    });
+
+    beforeEach(() => hostDetailsPage.stopAgentsHeartbeat());
+
+    it('should mark host data as stale when its agent stops reporting', () => {
+      hostDetailsPage.hostHealthIsMarkedAsStale();
+      hostDetailsPage.hostStaleBannerIsDisplayed();
+      hostDetailsPage.agentStatusIsNotReporting();
+      hostDetailsPage.sapInstanceRowIsMarkedAsStale();
+    });
+
+    it('should mark database data as sync when the agent starts reporting data again', () => {
+      hostDetailsPage.startAgentHeartbeat();
+
+      hostDetailsPage.hostHealthIsMarkedInSync();
+      hostDetailsPage.hostStaleBannerIsNotDisplayed();
+      hostDetailsPage.agentStatusIsReporting();
+
+      hostDetailsPage.markHdpDatabaseAsPresent();
+
+      hostDetailsPage.sapInstanceRowIsMarkedInSync();
+    });
+  });
+
   describe('Deregistration', () => {
     beforeEach(() => hostDetailsPage.visitSelectedHost());
 
@@ -203,9 +245,10 @@ context('Host Details', () => {
       it('should allow to deregister a host after clean-up confirmation', () => {
         hostDetailsPage.clickCleanUpUnhealthyHostButton();
         hostDetailsPage.cleanUpModalTitleIsDisplayed();
+        hostDetailsPage.interceptDeleteHost();
         hostDetailsPage.clickCleanUpConfirmationButton();
+        hostDetailsPage.waitForDeleteHostRequest();
         hostDetailsPage.cleanuUpModalIsNotDisplayed();
-        hostDetailsPage.validateUrl('/hosts');
         hostDetailsPage.cleanedUpHostIsNotDisplayed();
       });
     });

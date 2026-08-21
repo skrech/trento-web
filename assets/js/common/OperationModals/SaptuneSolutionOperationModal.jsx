@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useState } from 'react';
 import { pipe, filter, map } from 'lodash/fp';
 import { noop } from 'lodash';
@@ -10,42 +13,35 @@ const NOT_SELECTED = 'Select a saptune solution';
 const solutions = [
   {
     value: NOT_SELECTED,
-    key: 'not_selected',
     available: (_hana, _app, currentlyApplied) => !currentlyApplied,
   },
   {
     value: 'HANA',
-    key: 'hana',
     available: (isHanaRunning, isAppRunning, _currentlyApplied) =>
       isHanaRunning && !isAppRunning,
   },
   {
     value: 'NETWEAVER',
-    key: 'netweaver',
     available: (isHanaRunning, isAppRunning, _currentlyApplied) =>
       !isHanaRunning && isAppRunning,
   },
   {
     value: 'S4HANA-APPSERVER',
-    key: 's4hana-appserver',
     available: (isHanaRunning, isAppRunning, _currentlyApplied) =>
       !isHanaRunning && isAppRunning,
   },
   {
     value: 'S4HANA-APP+DB',
-    key: 's4hana-app-db',
     available: (isHanaRunning, isAppRunning, _currentlyApplied) =>
       isHanaRunning && isAppRunning,
   },
   {
     value: 'S4HANA-DBSERVER',
-    key: 's4hana-dbserver',
     available: (isHanaRunning, isAppRunning, _currentlyApplied) =>
       isHanaRunning && !isAppRunning,
   },
   {
     value: 'NETWEAVER+HANA',
-    key: 'netweaver-hana',
     available: (isHanaRunning, isAppRunning, _currentlyApplied) =>
       isHanaRunning && isAppRunning,
   },
@@ -58,7 +54,8 @@ const availableOptions =
 
 const markOptionDisabled = (currentlyApplied) => (option) => ({
   ...option,
-  disabled: option.value === currentlyApplied,
+  label: option.value,
+  isDisabled: option.value === currentlyApplied,
 });
 
 function SaptuneSolutionOperationModal({
@@ -100,10 +97,11 @@ function SaptuneSolutionOperationModal({
         </p>
         <Select
           className="ml-auto !w-2/3"
-          optionsName="solutions"
+          aria-label="solutions"
           options={availableSolutions}
           value={solution}
-          onChange={(value) => setSolution(value)}
+          initialValues={[solution]}
+          onChange={setSolution}
         />
       </div>
     </OperationModal>

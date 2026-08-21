@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import { useState, useEffect } from 'react';
 import { isEmpty, omitBy, isNil } from 'lodash';
 import { useDispatch } from 'react-redux';
@@ -13,14 +16,14 @@ import {
   updateSettings,
   clearSettings,
   testConnection,
-} from '@lib/api/suseManagerSettings';
+} from '@lib/api/suseMultiLinuxManagerSettings';
 import {
   getSettings as getAlertingSettings,
   saveSettings as saveAlertingSettings,
   updateSettings as updateAlertingSettings,
 } from '@lib/api/alertingSettings';
 
-export const useSuseManagerSettings = () => {
+export const useSuseMultiLinuxManagerSettings = () => {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState({});
@@ -28,7 +31,7 @@ export const useSuseManagerSettings = () => {
   const [fetchError, setFetchError] = useState(false);
   const [testingSettings, setTestingSettings] = useState(false);
 
-  const fetchSuseManagerSettings = async () => {
+  const fetchSuseMultiLinuxManagerSettings = async () => {
     setLoading(true);
     setFetchError(false);
     try {
@@ -43,7 +46,7 @@ export const useSuseManagerSettings = () => {
     }
   };
 
-  const saveSuseManagerSettings = async (newSettings) => {
+  const saveSuseMultiLinuxManagerSettings = async (newSettings) => {
     setLoading(true);
     setEntityErrors([]);
     try {
@@ -60,7 +63,7 @@ export const useSuseManagerSettings = () => {
     }
   };
 
-  const updateSuseManagerSettings = async (newSettings) => {
+  const updateSuseMultiLinuxManagerSettings = async (newSettings) => {
     setLoading(true);
     setEntityErrors([]);
     try {
@@ -77,7 +80,7 @@ export const useSuseManagerSettings = () => {
     }
   };
 
-  const deleteSuseManagerSettings = async () => {
+  const deleteSuseMultiLinuxManagerSettings = async () => {
     setLoading(true);
     try {
       await clearSettings();
@@ -89,7 +92,7 @@ export const useSuseManagerSettings = () => {
     }
   };
 
-  const testSuseManagerSettings = async () => {
+  const testSuseMultiLinuxManagerSettings = async () => {
     setLoading(true);
     setTestingSettings(true);
     try {
@@ -104,21 +107,21 @@ export const useSuseManagerSettings = () => {
   };
 
   useEffect(() => {
-    fetchSuseManagerSettings();
+    fetchSuseMultiLinuxManagerSettings();
   }, []);
 
   return {
-    fetchSuseManagerSettings,
-    saveSuseManagerSettings,
-    updateSuseManagerSettings,
-    testSuseManagerSettings,
-    deleteSuseManagerSettings,
-    clearSuseManagerEntityErrors: () => setEntityErrors([]),
-    suseManagerSettingsLoading: loading,
-    suseManagerSettings: settings,
-    suseManagerSettingsEntityErrors: entityErrors,
-    suseManagerSettingsfetchError: fetchError,
-    suseManagerSettingsTesting: testingSettings,
+    fetchSuseMultiLinuxManagerSettings,
+    saveSuseMultiLinuxManagerSettings,
+    updateSuseMultiLinuxManagerSettings,
+    testSuseMultiLinuxManagerSettings,
+    deleteSuseMultiLinuxManagerSettings,
+    clearSuseMultiLinuxManagerEntityErrors: () => setEntityErrors([]),
+    suseMultiLinuxManagerSettingsLoading: loading,
+    suseMultiLinuxManagerSettings: settings,
+    suseMultiLinuxManagerSettingsEntityErrors: entityErrors,
+    suseMultiLinuxManagerSettingsFetchError: fetchError,
+    suseMultiLinuxManagerSettingsTesting: testingSettings,
   };
 };
 

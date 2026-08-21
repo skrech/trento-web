@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
 
-import Switch from '.';
+import React, { useState } from 'react';
+import { action } from 'storybook/actions';
+
+import Switch from './Switch';
 
 export default {
   title: 'Components/Switch',
@@ -15,14 +19,18 @@ export default {
       description: 'Disabled state',
     },
     onChange: {
-      action: 'Toogle',
+      action: 'Toggle',
       description: 'Change switch state',
     },
   },
 };
 
 export const Default = {
-  args: {},
+  args: {
+    selected: false,
+    disabled: false,
+    onChange: action('onChange'),
+  },
   render: (args) => {
     const [selected, setSelected] = useState(args.selected);
     return <Switch {...args} selected={selected} onChange={setSelected} />;

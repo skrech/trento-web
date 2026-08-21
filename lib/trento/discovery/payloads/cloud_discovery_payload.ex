@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Discovery.Payloads.CloudDiscoveryPayload do
   @moduledoc """
   Cloud discovery integration event payload
@@ -110,7 +113,14 @@ defmodule Trento.Discovery.Payloads.CloudDiscoveryPayload do
   defmodule GcpMetadata do
     @moduledoc nil
 
-    @required_fields :all
+    @required_fields [
+      :disk_number,
+      :instance_name,
+      :machine_type,
+      :network,
+      :project_id,
+      :zone
+    ]
     use Trento.Support.Type
 
     deftype do

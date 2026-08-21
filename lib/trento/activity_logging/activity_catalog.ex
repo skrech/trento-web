@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.ActivityLog.ActivityCatalog do
   @moduledoc """
   Activity logging catalog
@@ -21,7 +24,10 @@ defmodule Trento.ActivityLog.ActivityCatalog do
 
   @excluded_events [
     Trento.Hosts.Events.HostChecksSelected,
-    Trento.Clusters.Events.ChecksSelected
+    Trento.Clusters.Events.ChecksSelected,
+    Trento.Clusters.Events.ClusterHostDataMarkedStale,
+    Trento.Clusters.Events.ClusterHostDataMarkedInSync,
+    Trento.SapSystems.Events.SapSystemDatabaseStaleAtChanged
   ]
 
   @operation_activities [
@@ -218,7 +224,13 @@ defmodule Trento.ActivityLog.ActivityCatalog do
         {TrentoWeb.V1.SapSystemController, :delete_application_instance} =>
           {:sap_system_cleanup_requested, 204},
         {TrentoWeb.V1.DatabaseController, :delete_database_instance} =>
-          {:database_cleanup_requested, 204}
+          {:database_cleanup_requested, 204},
+        {TrentoWeb.V1.AIConfigurationController, :create_ai_configuration} =>
+          {:ai_configuration_creation, 201},
+        {TrentoWeb.V1.AIConfigurationController, :update_ai_configuration} =>
+          {:ai_configuration_modification, 200},
+        {TrentoWeb.V1.AIConfigurationController, :clear_ai_configuration} =>
+          {:ai_configuration_deletion, 204}
       },
       get_connection_operation_activities()
     )

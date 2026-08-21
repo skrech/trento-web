@@ -1,3 +1,7 @@
+<!--
+  ~ SPDX-FileCopyrightText: SUSE LLC
+  ~ SPDX-License-Identifier: Apache-2.0
+-->
 <div id="trento" data-ph-capture-attribute-webversion={@version} />
 
 <script>
@@ -13,7 +17,9 @@
       ssoCallbackUrl: '<%= raw @sso_callback_url %>',
       ssoEnrollmentUrl: '<%= raw @sso_enrollment_url %>',
       operationsEnabled: <%= @operations_enabled %>,
-      webversion: '<%= @version %>'
+      webversion: '<%= @version %>',
+      aiEnabled: <%= @ai_enabled %>,
+      aiProviders: <%= raw Jason.encode!(@ai_providers) %>
   };
 </script>
 

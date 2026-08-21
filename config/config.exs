@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 # This file is responsible for configuring your application
 # and its dependencies with the aid of the Config module.
 #
@@ -9,6 +12,12 @@ import Config
 
 config :trento,
   ecto_repos: [Trento.Repo]
+
+# Number of rows deleted per individual statement when pruning discovery
+# events. Pruning is performed in batches so that, when a large backlog of
+# historical events has to be pruned, no single DELETE statement runs long
+# enough to exceed the default Ecto checkout timeout.
+config :trento, prune_batch_size: 1_000
 
 # Configures the endpoint
 config :trento, TrentoWeb.Endpoint,
@@ -157,6 +166,12 @@ config :trento, Trento.Scheduler,
       task: {Trento.ActivityLog, :clear_expired_logs, []},
       run_strategy: {Quantum.RunStrategy.Random, :cluster},
       overlap: false
+    ],
+    prune_discovery_events: [
+      schedule: "0 0 * * *",
+      task: {Trento.Discovery, :prune_discovery_events, [10]},
+      run_strategy: {Quantum.RunStrategy.Random, :cluster},
+      overlap: false
     ]
   ],
   debug_logging: false
@@ -210,12 +225,15 @@ config :trento, Trento.Infrastructure.Messaging.Adapter.AMQP,
     ]
   ]
 
+config :trento, :component_versions, adapter: Trento.Infrastructure.ComponentVersions
+config :trento, Trento.Infrastructure.ComponentVersions, http_client: Trento.Support.HttpClient
+
 config :trento, Trento.Infrastructure.Prometheus,
   adapter: Trento.Infrastructure.Prometheus.PrometheusApi
 
 config :trento, Trento.Infrastructure.Prometheus.PrometheusApi,
   url: "http://localhost:9090",
-  http_client: Trento.Infrastructure.Prometheus.Adapter.HttpClient
+  http_client: Trento.Support.HttpClient
 
 config :trento, Trento.Charts,
   enabled: true,
@@ -276,6 +294,48 @@ config :trento, :activity_log, refresh_interval: 60_000
 config :trento, Trento.Repo, types: Trento.Postgrex.Types
 
 config :trento, correlations: Trento.ActivityLog.Correlations.UnscopedCorrelations
+
+config :trento, :ai,
+  enabled: true,
+  base_system_prompt: "priv/ai/BASE_SYSTEM_PROMPT.md",
+  providers: [
+    googleai: [
+      models: [
+        "gemini-2.5-pro",
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-3.1-flash-preview",
+        "gemini-3.1-flash-lite-preview",
+        "gemini-3.1-pro-preview"
+      ]
+    ],
+    openai: [
+      models: [
+        "o3-mini",
+        "o3",
+        "gpt-4.1",
+        "gpt-4",
+        "gpt-5-mini",
+        "gpt-5.4"
+      ]
+    ],
+    anthropic: [
+      models: [
+        "claude-opus-4-6",
+        "claude-sonnet-4-6",
+        "claude-haiku-4-5"
+      ]
+    ]
+  ],
+  agent_server_adapter: Trento.Infrastructure.AI.SagentsAgentServer,
+  agent_supervisor_adapter: Trento.Infrastructure.AI.SagentsDynamicSupervisor,
+  ai_configuration_events_adapter: Trento.Infrastructure.AI.PubSubConfigurationEvents,
+  tool_sources: [
+    TrentoWeb.AI.ControllerToolSource,
+    {Trento.AI.RemoteOpenApiToolSource,
+     name: :wanda, spec_url: "http://localhost:4001/api/all/openapi"}
+  ],
+  http_client: Trento.Support.HttpClient
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

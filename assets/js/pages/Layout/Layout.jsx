@@ -1,9 +1,13 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useState, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { NavLink, Outlet } from 'react-router';
 
+import { getFromConfig } from '@lib/config';
 import { clearCredentialsFromStore } from '@lib/auth';
-import { getUserProfile } from '@state/selectors/user';
+import { getUserProfile, hasAIConfiguration } from '@state/selectors/user';
 import { optinCapturing, reset } from '@lib/analytics';
 
 import {
@@ -28,6 +32,8 @@ import classNames from 'classnames';
 import ProfileMenu from '@common/ProfileMenu';
 import ForbiddenGuard from '@common/ForbiddenGuard';
 import AnalyticsEula from '@pages/AnalyticsEula';
+import { SocketProvider } from '@common/SocketProvider';
+import AIAssistant from '@common/AIAssistant';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: EOS_HOME_OUTLINED },
@@ -96,7 +102,8 @@ function Layout() {
       : localStorage.setItem('sidebar-collapsed', true);
   }, [isCollapsed]);
 
-  const { username, email } = useSelector(getUserProfile);
+  const { id, username, email } = useSelector(getUserProfile);
+  const aiConfigured = useSelector(hasAIConfiguration);
 
   const sidebarIconColor = 'currentColor';
   const sidebarIconClassName = 'text-gray-400 hover:text-gray-300';
@@ -234,7 +241,7 @@ function Layout() {
         </div>
         <footer className="p-4 z-30 relative bottom-0 w-full bg-white shadow md:flex md:items-center md:justify-between md:p-6 dark:bg-gray-800">
           <span className="text-sm text-gray-500 sm:text-center dark:text-gray-400">
-            © 2020-2025 SUSE LLC
+            © 2020-2026 SUSE LLC
           </span>
           <span className="flex items-center mt-3 text-sm text-gray-500 dark:text-gray-400 sm:mt-0">
             This tool is free software released under the Apache License,
@@ -242,6 +249,11 @@ function Layout() {
           </span>
         </footer>
       </div>
+      {getFromConfig('aiEnabled') && (
+        <SocketProvider>
+          <AIAssistant userID={id} aiConfigured={aiConfigured} />
+        </SocketProvider>
+      )}
     </main>
   );
 }

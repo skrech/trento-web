@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Users.User do
   @moduledoc false
 
@@ -45,11 +48,14 @@ defmodule Trento.Users.User do
     field :analytics_enabled_at, :utc_datetime_usec
     field :analytics_eula_accepted_at, :utc_datetime_usec
     field :last_login_at, :utc_datetime_usec
+    field :timezone, :string, default: "Etc/UTC"
     field :lock_version, :integer, default: 1
 
     many_to_many :abilities, Ability, join_through: UsersAbilities, unique: true
 
     has_many :personal_access_tokens, PersonalAccessToken, preload_order: [desc: :created_at]
+
+    has_one :ai_configuration, Trento.AI.UserConfiguration
 
     timestamps(type: :utc_datetime_usec)
   end
@@ -60,7 +66,8 @@ defmodule Trento.Users.User do
     |> pow_extension_changeset(attrs)
     |> validate_password()
     |> custom_fields_changeset(attrs)
-    |> cast(attrs, [:locked_at, :password_change_requested_at])
+    |> cast(attrs, [:locked_at, :password_change_requested_at, :timezone])
+    |> validate_timezone()
   end
 
   def user_identity_changeset(user_or_changeset, user_identity, attrs, user_id_attrs) do
@@ -80,8 +87,15 @@ defmodule Trento.Users.User do
     |> maybe_apply_password_changesets(attrs)
     |> pow_extension_changeset(attrs)
     |> custom_fields_changeset(attrs)
-    |> cast(attrs, [:locked_at, :lock_version, :password_change_requested_at, :totp_enabled_at])
+    |> cast(attrs, [
+      :locked_at,
+      :lock_version,
+      :password_change_requested_at,
+      :totp_enabled_at,
+      :timezone
+    ])
     |> validate_inclusion(:totp_enabled_at, [nil])
+    |> validate_timezone()
     |> optimistic_lock(:lock_version)
   end
 
@@ -95,12 +109,16 @@ defmodule Trento.Users.User do
     |> cast(attrs, [
       :password_change_requested_at,
       :analytics_enabled_at,
-      :analytics_eula_accepted_at
+      :analytics_eula_accepted_at,
+      :timezone
     ])
+    |> validate_timezone()
   end
 
   def profile_update_sso_enabled_changeset(user, attrs) do
-    cast(user, attrs, [:analytics_enabled_at, :analytics_eula_accepted_at])
+    user
+    |> cast(attrs, [:analytics_enabled_at, :analytics_eula_accepted_at, :timezone])
+    |> validate_timezone()
   end
 
   def totp_update_changeset(user, attrs) do
@@ -147,6 +165,18 @@ defmodule Trento.Users.User do
   end
 
   defp maybe_apply_password_changesets(user, _), do: user
+
+  # Custom validation to check if the timezone is a valid IANA timezone,
+  # as the default Ecto validation only checks if the field is a string.
+  defp validate_timezone(changeset) do
+    Ecto.Changeset.validate_change(changeset, :timezone, fn :timezone, timezone ->
+      if Timex.Timezone.exists?(timezone) do
+        []
+      else
+        [timezone: "is not a valid IANA timezone"]
+      end
+    end)
+  end
 
   defp validate_current_password(changeset, %{password: _password} = attrs),
     do: pow_current_password_changeset(changeset, attrs)

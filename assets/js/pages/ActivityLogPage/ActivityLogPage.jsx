@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useState, useEffect } from 'react';
 import { noop } from 'lodash';
 import { useSearchParams } from 'react-router';
@@ -86,6 +89,7 @@ function MainView({
   itemsPerPage,
   onPageChange,
   onChangeItemsPerPage,
+  timezone,
 }) {
   if (status === 'initial') {
     return <> </>;
@@ -118,7 +122,7 @@ function MainView({
   const { data, pagination } = response;
   return (
     <>
-      <ActivityLogOverview activityLog={data} />
+      <ActivityLogOverview activityLog={data} timezone={timezone} />
       <Pagination
         className="rounded-b-lg"
         hasPrev={pagination?.has_previous_page}
@@ -157,12 +161,19 @@ function RefreshIntervalSelection({ disabled = false, rate, onChange = noop }) {
 
   return (
     <Select
-      disabled={disabled}
-      optionsName="refresh-rate"
+      isDisabled={disabled}
+      aria-label="refresh-rate"
       options={refreshRateOptions}
       value={refreshRate}
+      initialValues={[refreshRate]}
       renderOption={createOptionRenderer(null, (value) => (
         <span className="text-center block">
+          {refreshRateOptionsToLabel[value]}
+        </span>
+      ))}
+      renderControlOption={createOptionRenderer(null, (value) => (
+        <span className="text-center block">
+          <EOS_UPDATE_FILLED className="absolute" />
           {refreshRateOptionsToLabel[value]}
         </span>
       ))}
@@ -170,7 +181,6 @@ function RefreshIntervalSelection({ disabled = false, rate, onChange = noop }) {
         setRefreshRate(newRefreshRate);
         onChange(newRefreshRate);
       }}
-      selectedItemPrefix={<EOS_UPDATE_FILLED className="absolute" />}
     />
   );
 }
@@ -183,7 +193,7 @@ function ActivityLogPage() {
   );
   const [isFirstPage, setIsFirstPage] = useState(true);
   const [autorefreshInterval, setAutorefreshInterval] = useState(null);
-  const { abilities } = useSelector(getUserProfile);
+  const { abilities, timezone } = useSelector(getUserProfile);
 
   const searchInfo = (
     <div className="text-center">
@@ -240,17 +250,19 @@ function ActivityLogPage() {
       className: 'col-span-1',
     },
     {
-      key: 'to_date',
-      title: 'newer than',
+      key: 'from_date',
+      title: 'From date',
       type: 'date',
       prefilled: true,
+      timezone,
       className: 'col-span-1',
     },
     {
-      key: 'from_date',
-      title: 'older than',
+      key: 'to_date',
+      title: 'To date',
       type: 'date',
       prefilled: true,
+      timezone,
       className: 'col-span-1',
     },
   ];
@@ -347,6 +359,7 @@ function ActivityLogPage() {
         <MainView
           request={activityLogRequest}
           itemsPerPage={itemsPerPage}
+          timezone={timezone}
           onPageChange={pipe(
             setPaginationToSearchParams(searchParams),
             setSearchParams

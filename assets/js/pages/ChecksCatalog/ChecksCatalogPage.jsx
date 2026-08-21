@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 
@@ -28,7 +31,7 @@ function ChecksCatalogPage() {
     filteredCatalog,
     error: catalogError,
     loading,
-  } = useSelector(getCatalog());
+  } = useSelector(getCatalog);
 
   return (
     <ChecksCatalog

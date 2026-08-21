@@ -1,5 +1,8 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import AnalyticsEulaModal from './AnalyticsEulaModal';
@@ -66,5 +69,17 @@ describe('Analytics Eula Modal component', () => {
     );
 
     expect(mockOnCancel).toHaveBeenCalledWith(true);
+  });
+
+  it('should open a new window with the docs url when the link is clicked', async () => {
+    await act(() => render(<AnalyticsEulaModal isOpen />));
+
+    const linkElement = screen.getByRole('link', { name: 'anonymous metrics' });
+
+    expect(linkElement).toHaveProperty('target', '_blank');
+    expect(linkElement).toHaveProperty(
+      'href',
+      'https://documentation.suse.com/sles-sap/trento/single-html/SLES-SAP-trento/SLES-SAP-trento.html#sec-trento-analytics'
+    );
   });
 });

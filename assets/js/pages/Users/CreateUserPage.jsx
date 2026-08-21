@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'react-hot-toast';
@@ -9,6 +12,7 @@ import NotFound from '@pages/NotFound';
 import { isSingleSignOnEnabled } from '@lib/auth/config';
 import { listAbilities } from '@lib/api/abilities';
 import { createUser } from '@lib/api/users';
+import { timezones } from '@lib/timezones';
 
 import UserForm from './UserForm';
 
@@ -75,6 +79,7 @@ function CreateUserPage() {
         saving={savingState}
         errors={errorsState}
         onSave={onCreateUser}
+        timezones={timezones}
         onCancel={onCancel}
       />
     </div>

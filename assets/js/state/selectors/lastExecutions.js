@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import { createSelector } from '@reduxjs/toolkit';
 
 import { TARGET_CLUSTER, TARGET_HOST } from '@lib/model';
@@ -70,7 +73,7 @@ export const getLastExecutionData = createSelector(
   [
     (state, groupID, targetType) => getTargetHosts(state, groupID, targetType),
     (state, groupID, targetType) => getTarget(state, groupID, targetType),
-    (state) => getCatalog()(state),
+    getCatalog,
     (state, groupID) => getLastExecution(groupID)(state),
   ],
   (targetHosts, target, catalog, lastExecution) => {

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import { createAction, createSlice } from '@reduxjs/toolkit';
 
 // Fields set to undefined for the sake of documenting the state shape
@@ -15,6 +18,8 @@ export const initialState = {
   authInProgress: false,
   analytics_enabled: undefined,
   analytics_eula_accepted: undefined,
+  timezone: undefined,
+  ai_configuration: undefined,
 };
 
 export const userSlice = createSlice({
@@ -48,6 +53,8 @@ export const userSlice = createSlice({
           password_change_requested,
           analytics_enabled,
           analytics_eula_accepted,
+          timezone,
+          ai_configuration,
         },
       }
     ) {
@@ -61,6 +68,8 @@ export const userSlice = createSlice({
       state.password_change_requested = password_change_requested;
       state.analytics_enabled = analytics_enabled;
       state.analytics_eula_accepted = analytics_eula_accepted;
+      state.timezone = timezone;
+      state.ai_configuration = ai_configuration;
     },
   },
 });

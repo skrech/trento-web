@@ -1,8 +1,12 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Operations.ApplicationInstancePolicyTest do
   @moduledoc false
   use ExUnit.Case, async: true
 
   require Trento.Operations.Enums.SapInstanceOperations, as: SapInstanceOperations
+  require Trento.SapSystems.Enums.Status, as: Status
 
   alias Trento.Operations.ApplicationInstancePolicy
 
@@ -19,7 +23,7 @@ defmodule Trento.Operations.ApplicationInstancePolicyTest do
   test "should forbid unknown operation" do
     instance = build(:application_instance)
 
-    assert {:error, ["Unknown operation"]} ==
+    assert {:error, [%{message: "Unknown operation", metadata: []}]} ==
              ApplicationInstancePolicy.authorize_operation(:unknown, instance, %{})
   end
 
@@ -30,7 +34,8 @@ defmodule Trento.Operations.ApplicationInstancePolicyTest do
       )
 
     for operation <- SapInstanceOperations.values() do
-      assert {:error, ["Trento agent is not currently running in the host"]} ==
+      assert {:error,
+              [%{message: "Trento agent is not currently running in the host", metadata: []}]} ==
                ApplicationInstancePolicy.authorize_operation(operation, instance, %{})
     end
   end
@@ -52,19 +57,25 @@ defmodule Trento.Operations.ApplicationInstancePolicyTest do
       sid = "PRD"
 
       scenarios = [
-        %{health: :passing, result: :ok},
+        %{status: Status.green(), result: :ok},
         %{
-          health: :unknown,
+          status: Status.gray(),
           result:
-            {:error, ["Message server #{instance_number} of SAP system #{sid} is not started"]}
+            {:error,
+             [
+               %{
+                 message: "Message server #{instance_number} of SAP system #{sid} is not started",
+                 metadata: []
+               }
+             ]}
         }
       ]
 
-      for %{health: health, result: result} <- scenarios do
+      for %{status: status, result: result} <- scenarios do
         message_server_instance =
           build(:application_instance,
             instance_number: instance_number,
-            health: health,
+            status: status,
             features: "MESSAGESERVER|ENQUE"
           )
 
@@ -102,7 +113,13 @@ defmodule Trento.Operations.ApplicationInstancePolicyTest do
           database: build(:database, health: :passing)
         )
 
-      assert {:error, ["Message server not found in SAP system #{sid}"]} ==
+      assert {:error,
+              [
+                %{
+                  message: "Message server not found in SAP system #{sid}",
+                  metadata: []
+                }
+              ]} ==
                ApplicationInstancePolicy.authorize_operation(
                  :sap_instance_start,
                  %{instance | sap_system: sap_system},
@@ -114,7 +131,7 @@ defmodule Trento.Operations.ApplicationInstancePolicyTest do
       for database_health <- [:unknown, :passing] do
         message_server_instance =
           build(:application_instance,
-            health: :passing,
+            status: Status.green(),
             features: "MESSAGESERVER|ENQUE"
           )
 
@@ -140,20 +157,28 @@ defmodule Trento.Operations.ApplicationInstancePolicyTest do
     end
 
     test "should authorize other instances start depending on database running state" do
+      database_id = Faker.UUID.v4()
       sid = "PRD"
 
       scenarios = [
         %{database_health: :passing, result: :ok},
         %{
           database_health: :unknown,
-          result: {:error, ["Database #{sid} is not started"]}
+          result:
+            {:error,
+             [
+               %{
+                 message: "Database {0} is not started",
+                 metadata: [%{id: database_id, label: sid, type: :database}]
+               }
+             ]}
         }
       ]
 
       for %{database_health: database_health, result: result} <- scenarios do
         message_server_instance =
           build(:application_instance,
-            health: :passing,
+            status: Status.green(),
             features: "MESSAGESERVER|ENQUE"
           )
 
@@ -165,7 +190,7 @@ defmodule Trento.Operations.ApplicationInstancePolicyTest do
         sap_system =
           build(:sap_system,
             application_instances: [message_server_instance, instance],
-            database: build(:database, sid: sid, health: database_health)
+            database: build(:database, id: database_id, sid: sid, health: database_health)
           )
 
         assert result ==
@@ -186,7 +211,7 @@ defmodule Trento.Operations.ApplicationInstancePolicyTest do
           host: build(:host, heartbeat: :passing, cluster: @empty_ascs_ers_cluster)
         )
 
-      other_instances = build_list(2, :application_instance, health: :unknown)
+      other_instances = build_list(2, :application_instance, status: Status.gray())
 
       sap_system =
         build(:sap_system,
@@ -210,7 +235,7 @@ defmodule Trento.Operations.ApplicationInstancePolicyTest do
         )
 
       [%{instance_number: inst_number_1}, %{instance_number: inst_number_2}] =
-        other_instances = build_list(2, :application_instance, health: :passing)
+        other_instances = build_list(2, :application_instance, status: Status.green())
 
       sap_system =
         build(:sap_system,
@@ -219,8 +244,14 @@ defmodule Trento.Operations.ApplicationInstancePolicyTest do
 
       assert {:error,
               [
-                "Instance #{inst_number_1} of SAP system #{sid} is not stopped",
-                "Instance #{inst_number_2} of SAP system #{sid} is not stopped"
+                %{
+                  message: "Instance #{inst_number_1} of SAP system #{sid} is not stopped",
+                  metadata: []
+                },
+                %{
+                  message: "Instance #{inst_number_2} of SAP system #{sid} is not stopped",
+                  metadata: []
+                }
               ]} ==
                ApplicationInstancePolicy.authorize_operation(
                  :sap_instance_stop,
@@ -236,7 +267,7 @@ defmodule Trento.Operations.ApplicationInstancePolicyTest do
         host: build(:host, heartbeat: :passing, cluster: @empty_ascs_ers_cluster)
       )
 
-    other_instances = build_list(2, :application_instance, health: :unknown)
+    other_instances = build_list(2, :application_instance, status: Status.gray())
 
     sap_system =
       build(:sap_system,

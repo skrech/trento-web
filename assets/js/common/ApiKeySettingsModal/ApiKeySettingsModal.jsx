@@ -1,8 +1,12 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useEffect, useState } from 'react';
-import { format, parseISO } from 'date-fns';
+
 import { noop } from 'lodash';
 import { EOS_INFO_OUTLINED } from 'eos-icons-react';
 import { availableSelectTimeOptions, normalizeDate } from '@lib/date';
+import { formatDateOnly } from '@lib/timezones';
 import Button from '@common/Button';
 import Modal from '@common/Modal';
 import { InputNumber } from '@common/Input';
@@ -18,6 +22,7 @@ function ApiKeySettingsModal({
   loading = false,
   onGenerate = noop,
   onClose = noop,
+  timezone,
   generatedApiKey,
   generatedApiKeyExpiration,
 }) {
@@ -125,14 +130,14 @@ function ApiKeySettingsModal({
                   }}
                 />
               </div>
-              <div className="w-2/4 pt-4">
+              <div className="w-2/4 py-4">
                 <Select
-                  className="pb-4 min-w-24 max-w-fit"
-                  optionsName=""
+                  className="min-w-24 max-w-fit"
+                  aria-label="key-expiration-time"
                   options={timeOptions}
-                  disabled={apiKeyNeverExpires}
-                  value={timeQuantityType}
-                  onChange={(value) => setTimeQuantityType(value)}
+                  isDisabled={apiKeyNeverExpires}
+                  initialValues={[timeQuantityType]}
+                  onChange={setTimeQuantityType}
                 />
               </div>
               <div className="w-1/6 h-4/5">
@@ -162,10 +167,7 @@ function ApiKeySettingsModal({
 
                   <div className="mt-2 text-gray-600 text-sm">
                     {generatedApiKeyExpiration
-                      ? `Key will expire ${format(
-                          parseISO(generatedApiKeyExpiration),
-                          'd LLL yyyy'
-                        )}`
+                      ? `Key will expire ${formatDateOnly(generatedApiKeyExpiration, timezone)}`
                       : 'Key will never expire'}
                   </div>
                 </div>

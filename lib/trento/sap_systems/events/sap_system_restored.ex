@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.SapSystems.Events.SapSystemRestored do
   @moduledoc """
   This event is emitted when a sap system is restored.
@@ -13,5 +16,6 @@ defmodule Trento.SapSystems.Events.SapSystemRestored do
     field :db_host, :string
     field :health, Ecto.Enum, values: Health.values()
     field :database_health, Ecto.Enum, values: Health.values()
+    field :database_stale_at, :utc_datetime_usec
   end
 end

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useState } from 'react';
 import { noop } from 'lodash';
 import { getOperationTitle } from '@lib/operations';
@@ -13,23 +16,23 @@ const ALL_SELECTED = 'all';
 
 const instanceTypes = [
   {
-    key: 'All instances',
+    label: 'All instances',
     value: ALL_SELECTED,
   },
   {
-    key: 'ABAP instances',
+    label: 'ABAP instances',
     value: 'abap',
   },
   {
-    key: 'J2EE instances',
+    label: 'J2EE instances',
     value: 'j2ee',
   },
   {
-    key: 'ASCS/SCS instances',
+    label: 'ASCS/SCS instances',
     value: 'scs',
   },
   {
-    key: 'ENQREP instances',
+    label: 'ENQREP instances',
     value: 'enqrep',
   },
 ];
@@ -79,11 +82,10 @@ function SapStartStopOperationModal({
             </p>
             <Select
               className="ml-auto !flex-none !w-2/3"
-              optionsName="instance_type"
+              aria-label="instance_type"
               options={instanceTypes}
-              value={instanceType}
-              onChange={(value) => setInstanceType(value)}
-              renderOption={(item) => item.key}
+              initialValues={[instanceTypes[0]]}
+              onChange={setInstanceType}
             />
           </div>
         )}

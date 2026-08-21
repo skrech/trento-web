@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Discovery.Policies.ClusterPolicyTest do
   use ExUnit.Case
   use Trento.DataCase
@@ -12,6 +15,7 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
   require Trento.Clusters.Enums.HanaArchitectureType, as: HanaArchitectureType
   require Trento.Clusters.Enums.HanaScenario, as: HanaScenario
   require Trento.Clusters.Enums.SapInstanceResourceType, as: SapInstanceResourceType
+  require Trento.Clusters.Enums.SbdDeviceStatus, as: SbdDeviceStatus
 
   alias Trento.Discovery.Policies.ClusterPolicy
 
@@ -212,14 +216,14 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                     }
                   ],
                   sbd_devices: [
-                    %SbdDevice{
+                    SbdDevice.new!(%{
                       device: "/dev/vdc",
-                      status: "healthy"
-                    },
-                    %SbdDevice{
+                      status: SbdDeviceStatus.healthy()
+                    }),
+                    SbdDevice.new!(%{
                       device: "/dev/vdb",
-                      status: "healthy"
-                    }
+                      status: SbdDeviceStatus.healthy()
+                    })
                   ],
                   secondary_sync_state: "SOK",
                   sr_health_state: "4",
@@ -434,7 +438,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                 type: :hana_scale_up,
                 hosts_number: 2,
                 resources_number: 8,
-                discovered_health: :passing,
                 provider: Provider.azure(),
                 state: :S_IDLE
               }
@@ -622,14 +625,14 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                     }
                   ],
                   sbd_devices: [
-                    %SbdDevice{
+                    SbdDevice.new!(%{
                       device: "/dev/vdc",
-                      status: "healthy"
-                    },
-                    %SbdDevice{
+                      status: SbdDeviceStatus.healthy()
+                    }),
+                    SbdDevice.new!(%{
                       device: "/dev/vdb",
-                      status: "healthy"
-                    }
+                      status: SbdDeviceStatus.healthy()
+                    })
                   ],
                   secondary_sync_state: "SOK",
                   sr_health_state: "4",
@@ -847,7 +850,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                 type: :hana_scale_up,
                 hosts_number: 2,
                 resources_number: 8,
-                discovered_health: :passing,
                 provider: Provider.azure(),
                 state: :S_IDLE
               }
@@ -1031,7 +1033,7 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                     }
                   ],
                   sbd_devices: [
-                    %Trento.Clusters.ValueObjects.SbdDevice{device: "/dev/sdj", status: "healthy"}
+                    SbdDevice.new!(%{device: "/dev/sdj", status: SbdDeviceStatus.healthy()})
                   ],
                   secondary_sync_state: "SOK",
                   sr_health_state: "4",
@@ -1177,7 +1179,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                 type: :hana_scale_up,
                 hosts_number: 2,
                 resources_number: 8,
-                discovered_health: :passing,
                 provider: Provider.azure(),
                 state: :S_IDLE
               }
@@ -1332,11 +1333,11 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                   ],
                   stopped_resources: [],
                   sbd_devices: [
-                    %SbdDevice{
+                    SbdDevice.new!(%{
                       device:
                         "/dev/disk/by-id/scsi-SLIO-ORG_IBLOCK_e34218cd-0d9a-4b21-b6d5-a313980baa82",
-                      status: "healthy"
-                    }
+                      status: SbdDeviceStatus.healthy()
+                    })
                   ],
                   resources: [
                     %ClusterResource{
@@ -1497,7 +1498,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                 type: :ascs_ers,
                 hosts_number: 2,
                 resources_number: 9,
-                discovered_health: :passing,
                 provider: Provider.azure(),
                 state: :S_IDLE
               }
@@ -1652,11 +1652,11 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                   ],
                   stopped_resources: [],
                   sbd_devices: [
-                    %SbdDevice{
+                    SbdDevice.new!(%{
                       device:
                         "/dev/disk/by-id/scsi-SLIO-ORG_IBLOCK_e34218cd-0d9a-4b21-b6d5-a313980baa82",
-                      status: "healthy"
-                    }
+                      status: SbdDeviceStatus.healthy()
+                    })
                   ],
                   resources: [
                     %ClusterResource{
@@ -1817,7 +1817,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                 type: :ascs_ers,
                 hosts_number: 2,
                 resources_number: 9,
-                discovered_health: :passing,
                 provider: Provider.azure(),
                 state: :S_IDLE
               }
@@ -1902,7 +1901,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                 type: :unknown,
                 hosts_number: 2,
                 resources_number: 5,
-                discovered_health: :unknown,
                 provider: Provider.azure(),
                 state: :S_IDLE
               }
@@ -2188,11 +2186,11 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                   ],
                   stopped_resources: [],
                   sbd_devices: [
-                    %SbdDevice{
+                    SbdDevice.new!(%{
                       device:
                         "/dev/disk/by-id/scsi-SLIO-ORG_IBLOCK_e34218cd-0d9a-4b21-b6d5-a313980baa82",
-                      status: "healthy"
-                    }
+                      status: SbdDeviceStatus.healthy()
+                    })
                   ],
                   resources: [
                     %ClusterResource{
@@ -2491,7 +2489,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                 type: :ascs_ers,
                 hosts_number: 2,
                 resources_number: 17,
-                discovered_health: :passing,
                 provider: Provider.azure(),
                 state: :S_IDLE
               }
@@ -2766,7 +2763,7 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
   end
 
   describe "ascs/ers clusters health" do
-    test "should set the health to critical when one of the nodes is unclean" do
+    test "should set SAP system distributed to false when a node in unclean" do
       assert {:ok,
               [
                 %RegisterOnlineClusterHost{
@@ -2777,8 +2774,7 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                         distributed: false
                       }
                     ]
-                  },
-                  discovered_health: :critical
+                  }
                 }
               ]} =
                "ha_cluster_discovery_ascs_ers"
@@ -2790,7 +2786,7 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                |> ClusterPolicy.handle(nil)
     end
 
-    test "should set the health to critical when the SAPInstance resource is Stopped" do
+    test "should set SAP system distributed to false when the SAPInstance resource is Stopped" do
       group_1_resources =
         build_list(1, :crm_resource, %{
           "Id" => "rsc_sap_NWP_ASCS00",
@@ -2817,8 +2813,7 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                         distributed: false
                       }
                     ]
-                  },
-                  discovered_health: :critical
+                  }
                 }
               ]} =
                "ha_cluster_discovery_ascs_ers"
@@ -2830,7 +2825,7 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                |> ClusterPolicy.handle(nil)
     end
 
-    test "should set the health to critical when the SAPInstance resource is running the same node" do
+    test "should set SAP system distributed to false when the SAPInstance resource is running the same node" do
       group_1_resources =
         build_list(1, :crm_resource, %{
           "Id" => "rsc_sap_NWP_ASCS00",
@@ -2855,8 +2850,7 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                         distributed: false
                       }
                     ]
-                  },
-                  discovered_health: :critical
+                  }
                 }
               ]} =
                "ha_cluster_discovery_ascs_ers"
@@ -2868,7 +2862,7 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                |> ClusterPolicy.handle(nil)
     end
 
-    test "should set the health to critical when the SAPInstance is on failed state" do
+    test "should set SAP system distributed to false when the SAPInstance is on failed state" do
       group_1_resources =
         build_list(1, :crm_resource, %{
           "Id" => "rsc_sap_NWP_ASCS00",
@@ -2895,8 +2889,7 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                         distributed: false
                       }
                     ]
-                  },
-                  discovered_health: :critical
+                  }
                 }
               ]} =
                "ha_cluster_discovery_ascs_ers"
@@ -3156,7 +3149,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                     }
                   ]
                 },
-                discovered_health: :passing,
                 host_id: "a3279fd0-0443-1234-9354-2d7909fd6bc6",
                 hosts_number: 2,
                 name: "hana_cluster",
@@ -3488,7 +3480,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                     }
                   ]
                 },
-                discovered_health: :critical,
                 host_id: "1dc79771-0a96-1234-b5b6-cd4d0aef6acc",
                 hosts_number: 2,
                 name: "hana_cluster",
@@ -3690,14 +3681,14 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                     }
                   ],
                   sbd_devices: [
-                    %SbdDevice{
+                    SbdDevice.new!(%{
                       device: "/dev/vdc",
-                      status: "healthy"
-                    },
-                    %SbdDevice{
+                      status: SbdDeviceStatus.healthy()
+                    }),
+                    SbdDevice.new!(%{
                       device: "/dev/vdb",
-                      status: "healthy"
-                    }
+                      status: SbdDeviceStatus.healthy()
+                    })
                   ],
                   secondary_sync_state: "SOK",
                   sr_health_state: "4",
@@ -3915,7 +3906,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                 type: :hana_scale_up,
                 hosts_number: 2,
                 resources_number: 8,
-                discovered_health: :passing,
                 provider: Provider.azure(),
                 state: :S_IDLE
               }
@@ -4154,7 +4144,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                 type: :hana_scale_up,
                 hosts_number: 2,
                 resources_number: 8,
-                discovered_health: :passing,
                 provider: Provider.azure(),
                 state: :S_IDLE
               }
@@ -4210,7 +4199,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                   designated_controller: true,
                   resources_number: 15,
                   hosts_number: 6,
-                  discovered_health: :passing,
                   cib_last_written: "Thu Feb 23 15:59:56 2023",
                   details: %HanaClusterDetails{
                     architecture_type: HanaArchitectureType.classic(),
@@ -4520,10 +4508,10 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                       %HanaClusterSite{name: "Site2", state: "Secondary", sr_health_state: "4"}
                     ],
                     sbd_devices: [
-                      %SbdDevice{
+                      SbdDevice.new!(%{
                         device: "/dev/vdb",
-                        status: "healthy"
-                      }
+                        status: SbdDeviceStatus.healthy()
+                      })
                     ],
                     resources: [
                       %ClusterResource{
@@ -4770,7 +4758,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                   designated_controller: false,
                   resources_number: 13,
                   hosts_number: 5,
-                  discovered_health: :passing,
                   cib_last_written: "Tue Jan 23 12:49:07 2024",
                   details: %HanaClusterDetails{
                     architecture_type: HanaArchitectureType.classic(),
@@ -5015,6 +5002,7 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                         status: "Online",
                         attributes: %{},
                         virtual_ip: nil,
+                        is_majority_maker: true,
                         resources: [
                           %ClusterResource{
                             id: "stonith-sbd",
@@ -5033,11 +5021,11 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                       %HanaClusterSite{name: "Site1", state: "Secondary", sr_health_state: "4"}
                     ],
                     sbd_devices: [
-                      %SbdDevice{
+                      SbdDevice.new!(%{
                         device:
                           "/dev/disk/by-id/scsi-1LIO-ORG_sbdnfs:01144514-24f0-4386-83c2-321e6b1af8b0",
-                        status: "healthy"
-                      }
+                        status: SbdDeviceStatus.healthy()
+                      })
                     ],
                     resources: [
                       %ClusterResource{
@@ -5262,7 +5250,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                   designated_controller: true,
                   resources_number: 15,
                   hosts_number: 6,
-                  discovered_health: :passing,
                   cib_last_written: "Thu Feb 23 15:59:56 2023",
                   details: %HanaClusterDetails{
                     architecture_type: HanaArchitectureType.classic(),
@@ -5572,10 +5559,10 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                       %HanaClusterSite{name: "Site2", state: "Secondary", sr_health_state: "4"}
                     ],
                     sbd_devices: [
-                      %SbdDevice{
+                      SbdDevice.new!(%{
                         device: "/dev/vdb",
-                        status: "healthy"
-                      }
+                        status: SbdDeviceStatus.healthy()
+                      })
                     ],
                     resources: [
                       %ClusterResource{
@@ -5820,7 +5807,8 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                         resources: [],
                         site: nil,
                         status: "Online",
-                        virtual_ip: nil
+                        virtual_ip: nil,
+                        is_majority_maker: true
                       },
                       %HanaClusterNode{
                         attributes: %{
@@ -5903,7 +5891,8 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                         ],
                         site: "HANA_S1",
                         status: "Online",
-                        virtual_ip: "10.23.0.30"
+                        virtual_ip: "10.23.0.30",
+                        is_majority_maker: false
                       },
                       %HanaClusterNode{
                         attributes: %{
@@ -6383,7 +6372,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                       }
                     ]
                   },
-                  discovered_health: :passing,
                   host_id: "6eabc497-6067-4de9-b583-e4c63334ff64",
                   hosts_number: 5,
                   name: "hacluster",
@@ -6405,6 +6393,39 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                "ha_cluster_discovery_hana_scale_out_no_srhooks"
                |> load_discovery_event_fixture()
                |> ClusterPolicy.handle(nil)
+    end
+
+    test "should detect the majority maker node in the hana-scale-out-with-majority-maker scenario" do
+      assert {:ok,
+              [
+                %RegisterOnlineClusterHost{
+                  type: :hana_scale_out,
+                  details: %HanaClusterDetails{nodes: nodes}
+                }
+              ]} =
+               "ha_cluster_discovery_hana_scale_out_with_majority_maker"
+               |> load_discovery_event_fixture()
+               |> ClusterPolicy.handle(nil)
+
+      majority_makers =
+        nodes
+        |> Enum.filter(& &1.is_majority_maker)
+        |> Enum.map(& &1.name)
+
+      non_majority_makers =
+        nodes
+        |> Enum.reject(& &1.is_majority_maker)
+        |> Enum.map(& &1.name)
+        |> Enum.sort()
+
+      assert majority_makers == ["hana-s-mm"]
+
+      assert non_majority_makers == [
+               "hana-s1-db1",
+               "hana-s1-db2",
+               "hana-s2-db1",
+               "hana-s2-db2"
+             ]
     end
   end
 
@@ -6534,7 +6555,9 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                          virtual_ip: nil
                        }
                      ],
-                     sbd_devices: [%SbdDevice{device: "/dev/vdb", status: "healthy"}],
+                     sbd_devices: [
+                       SbdDevice.new!(%{device: "/dev/vdb", status: SbdDeviceStatus.healthy()})
+                     ],
                      secondary_sync_state: "SOK",
                      sites: [
                        %HanaClusterSite{name: "WDF", sr_health_state: "4", state: "Primary"},
@@ -6629,7 +6652,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                        }
                      ]
                    },
-                   discovered_health: :passing,
                    host_id: "779cdd70-e9e2-58ca-b18a-bf3eb3f71244",
                    hosts_number: 2,
                    name: "hana_cluster",
@@ -6767,7 +6789,9 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                          virtual_ip: "10.70.1.13"
                        }
                      ],
-                     sbd_devices: [%SbdDevice{device: "/dev/vdb", status: "healthy"}],
+                     sbd_devices: [
+                       SbdDevice.new!(%{device: "/dev/vdb", status: SbdDeviceStatus.healthy()})
+                     ],
                      secondary_sync_state: "SFAIL",
                      sites: [
                        %HanaClusterSite{name: "ROT", sr_health_state: "4", state: "Primary"},
@@ -6872,7 +6896,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                        }
                      ]
                    },
-                   discovered_health: :critical,
                    host_id: "779cdd70-e9e2-58ca-b18a-bf3eb3f71244",
                    hosts_number: 2,
                    name: "hana_cluster",
@@ -6908,7 +6931,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicyTest do
                    cluster_id: "34a94290-2236-5e4d-8def-05beb32d14d4",
                    designated_controller: true,
                    details: nil,
-                   discovered_health: :unknown,
                    host_id: "779cdd70-e9e2-58ca-b18a-bf3eb3f71244",
                    hosts_number: 2,
                    name: "hana_cluster",

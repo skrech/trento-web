@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import * as activityLogPage from '../pageObject/activity_log_po';
 import * as basePage from '../pageObject/base_po';
 
@@ -24,7 +27,7 @@ context('Activity Log page', () => {
 
     it('should reset querystring when reloading the page from navigation menu', () => {
       const queryString =
-        '?search=foo+bar&from_date=custom&from_date=2024-08-14T10%3A21%3A00.000Z&to_date=custom&to_date=2024-08-13T10%3A21%3A00.000Z&type=login_attempt&type=resource_tagging&refreshRate=5000';
+        '?search=foo+bar&from_date=custom&from_date=2024-08-13T10%3A21%3A00.000Z&to_date=custom&to_date=2024-08-14T10%3A21%3A00.000Z&type=login_attempt&type=resource_tagging&refreshRate=5000';
       activityLogPage.visit(queryString);
       activityLogPage.refreshRateFilterHasTheExpectedValue('5s');
       activityLogPage.filteredActionsAreTheExpectedOnes(
@@ -41,39 +44,40 @@ context('Activity Log page', () => {
     it('should render without selected filters', () => {
       activityLogPage.visit();
       activityLogPage.filterTypeHasNothingSelected();
-      activityLogPage.filterOlderThanHasNothingSelected();
-      activityLogPage.filterNewerThanHasNothingSelected();
+      activityLogPage.filterFromDateHasNothingSelected();
+      activityLogPage.filterToDateHasNothingSelected();
       activityLogPage.metadataSearchHasTheExpectedPlaceholder();
       activityLogPage.activityLogRequestHasExpectedStatusCode(200);
     });
 
     it('should render with selected filters from querystring', () => {
-      const toDate = '2024-08-13T10%3A21%3A00.000Z';
-      const fromDate = '2024-08-14T10%3A21%3A00.000Z';
+      const fromDate = '2024-08-13T10%3A21%3A00.000Z';
+      const toDate = '2024-08-14T10%3A21%3A00.000Z';
 
       const queryString = `?search=foo+bar&from_date=custom&from_date=${fromDate}&to_date=custom&to_date=${toDate}&type=login_attempt&type=resource_tagging`;
       activityLogPage.visit(queryString);
       activityLogPage.filteredActionsAreTheExpectedOnes(
         'Login Attempt, Tag Added'
       );
-      activityLogPage.filterNewerThanHasTheExpectedValue(toDate);
-      activityLogPage.filterOlderThanHasTheExpectedValue(fromDate);
+      activityLogPage.filterFromDateHasTheExpectedValue(fromDate);
+      activityLogPage.filterToDateHasTheExpectedValue(toDate);
 
       activityLogPage.metadataSearchHasTheExpectedValue('foo bar');
       activityLogPage.activityLogRequestHasExpectedStatusCode(200);
     });
 
     it('should update querystring when filters are selected', () => {
-      const toDate = '2024-08-13T10:21';
-      const fromDate = '2024-08-14T10:21';
+      const fromDate = '2024-08-13T10:21';
+      const toDate = '2024-08-14T10:21';
 
       activityLogPage.visit(`?${defaultSeverity}`);
+      activityLogPage.waitForActivityLogRequest();
 
-      activityLogPage.clickFilterOlderThanButton();
-      activityLogPage.typeFilterOlderThanInputField(fromDate);
+      activityLogPage.clickFilterFromDateButton();
+      activityLogPage.typeFilterFromDateInputField(fromDate);
 
-      activityLogPage.clickFilterNewerThanButton();
-      activityLogPage.typeFilterNewerThanInputField(toDate);
+      activityLogPage.clickFilterToDateButton();
+      activityLogPage.typeFilterToDateInputField(toDate);
 
       activityLogPage.clickFilterTypeButton();
       activityLogPage.selectFilterTypeOption('Login Attempt');
@@ -81,11 +85,12 @@ context('Activity Log page', () => {
 
       activityLogPage.typeMetadataFilter('foo bar');
       activityLogPage.clickApplyFiltersButton();
+      activityLogPage.waitForActivityLogRequest();
 
-      const toDateQueryString =
-        activityLogPage.formatEncodedDateForQueryString(toDate);
       const fromDateQueryString =
         activityLogPage.formatEncodedDateForQueryString(fromDate);
+      const toDateQueryString =
+        activityLogPage.formatEncodedDateForQueryString(toDate);
 
       const expectedUrl = `/activity_log?${defaultSeverity}&from_date=custom&from_date=${fromDateQueryString}&to_date=custom&to_date=${toDateQueryString}&type=login_attempt&type=resource_tagging&search=foo+bar&first=20`;
       activityLogPage.validateUrl(expectedUrl);
@@ -94,16 +99,17 @@ context('Activity Log page', () => {
     it('should reset filters', () => {
       const queryString = `?${defaultSeverity}&from_date=custom&from_date=2024-08-14T10%3A21%3A00.000Z&type=login_attempt&type=resource_tagging&search=foo+bar`;
       activityLogPage.visit(queryString);
+      activityLogPage.waitForActivityLogRequest();
       activityLogPage.clickResetFiltersButton();
       activityLogPage.filterTypeHasNothingSelected();
-      activityLogPage.filterOlderThanHasNothingSelected();
-      activityLogPage.filterNewerThanHasNothingSelected();
+      activityLogPage.filterFromDateHasNothingSelected();
+      activityLogPage.filterToDateHasNothingSelected();
       activityLogPage.metadataSearchHasTheExpectedPlaceholder();
       activityLogPage.activityLogRequestHasExpectedStatusCode(200);
     });
 
     it('should refresh content based on currently applied filters', () => {
-      const queryString = `?${defaultSeverity}&from_date=custom&from_date=2024-08-14T10%3A21%3A00.000Z&to_date=custom&to_date=2024-08-13T10%3A21%3A00.000Z&type=login_attempt&type=resource_tagging&search=foo+bar`;
+      const queryString = `?${defaultSeverity}&from_date=custom&from_date=2024-08-13T10%3A21%3A00.000Z&to_date=custom&to_date=2024-08-14T10%3A21%3A00.000Z&type=login_attempt&type=resource_tagging&search=foo+bar`;
       activityLogPage.visit(queryString);
       activityLogPage.waitForActivityLogRequest();
       activityLogPage.clickRefreshButton();
@@ -146,6 +152,7 @@ context('Activity Log page', () => {
         activityLogPage.paginationPropertiesAreTheExpected(response);
         let expectedUrl = `/activity_log?first=20&after=${response.body.pagination.end_cursor}&${defaultSeverity}`;
         activityLogPage.clickNextPageButton();
+        activityLogPage.waitForActivityLogRequest();
         activityLogPage.validateUrl(expectedUrl);
       });
       activityLogPage.clickFilterTypeButton();
@@ -153,6 +160,7 @@ context('Activity Log page', () => {
       activityLogPage.searchForDesiredFilterType('Login');
       activityLogPage.selectFilterTypeOption('Login Attempt');
       activityLogPage.clickApplyFiltersButton();
+      activityLogPage.waitForActivityLogRequest();
       cy.get('button[data-testid="filter-Type"]').should(
         'have.text',
         'Login Attempt'
@@ -162,15 +170,15 @@ context('Activity Log page', () => {
     });
 
     it('should select correct date filter when changing page', () => {
-      const toDate = '2024-08-14T10%3A21%3A00.000Z';
-      const queryString = `?to_date=custom&to_date=${toDate}`;
+      const fromDate = '2024-08-14T10%3A21%3A00.000Z';
+      const queryString = `?from_date=custom&from_date=${fromDate}`;
       activityLogPage.visit(queryString);
-      activityLogPage.filterNewerThanHasTheExpectedValue(toDate);
+      activityLogPage.filterFromDateHasTheExpectedValue(fromDate);
       activityLogPage.waitForActivityLogRequest().then(({ response }) => {
         activityLogPage.clickNextPageButton();
         activityLogPage.activityLogRequestHasExpectedStatusCode(200);
-        activityLogPage.filterNewerThanHasTheExpectedValue(toDate);
-        const expectedUrl = `/activity_log?first=20&after=${response.body.pagination.end_cursor}&to_date=custom&to_date=${toDate}`;
+        activityLogPage.filterFromDateHasTheExpectedValue(fromDate);
+        const expectedUrl = `/activity_log?first=20&after=${response.body.pagination.end_cursor}&from_date=custom&from_date=${fromDate}`;
         activityLogPage.validateUrl(expectedUrl);
       });
     });
@@ -262,7 +270,7 @@ context('Activity Log page', () => {
 
     it('should ignore refresh rate query string param in API call', () => {
       const refreshRateQueryString = '&refreshRate=5000';
-      const queryString = `?search=foo+bar&from_date=custom&from_date=2024-08-14T10%3A21%3A00.000Z&to_date=custom&to_date=2024-08-13T10%3A21%3A00.000Z&type=login_attempt&type=resource_tagging${refreshRateQueryString}`;
+      const queryString = `?search=foo+bar&from_date=custom&from_date=2024-08-13T10%3A21%3A00.000Z&to_date=custom&to_date=2024-08-14T10%3A21%3A00.000Z&type=login_attempt&type=resource_tagging${refreshRateQueryString}`;
       activityLogPage.visit(queryString);
       activityLogPage.apiCallDoesNotContainRefreshRate(refreshRateQueryString);
       activityLogPage.autoRefreshIntervalButtonHasTheExpectedValue('5s');
@@ -279,8 +287,10 @@ context('Activity Log page', () => {
       const queryString =
         '?from_date=custom&from_date=2024-08-14T10%3A21%3A00.000Z&type=login_attempt&type=resource_tagging&search=foo+bar&refreshRate=10000';
       activityLogPage.visit(queryString);
+      activityLogPage.waitForActivityLogRequest();
       activityLogPage.autoRefreshIntervalButtonHasTheExpectedValue('10s');
       activityLogPage.clickResetFiltersButton();
+      activityLogPage.waitForActivityLogRequest();
       activityLogPage.autoRefreshIntervalButtonHasTheExpectedValue('10s');
       const expectedUrl = `/activity_log?${defaultSeverity}&first=20&refreshRate=10000`;
       activityLogPage.validateUrl(expectedUrl);
@@ -321,14 +331,15 @@ context('Activity Log page', () => {
         activityLogPage.expectedAggregateAmountOfRequests(4);
       });
     });
-
-    it(`should update querystring when filters are selected`, () => {
+    it('should update querystring when filters are selected', () => {
       activityLogPage.visit(`?${defaultSeverity}&refreshRate=5000`);
+      activityLogPage.waitForActivityLogRequest();
       activityLogPage.clickFilterTypeButton();
       activityLogPage.selectFilterTypeOption('Login Attempt');
       activityLogPage.selectFilterTypeOption('Tag Added');
       activityLogPage.typeMetadataFilter('foo bar');
       activityLogPage.clickApplyFiltersButton();
+      activityLogPage.waitForActivityLogRequest();
       const expectedUrl = `/activity_log?${defaultSeverity}&refreshRate=5000&type=login_attempt&type=resource_tagging&search=foo+bar&first=20`;
       activityLogPage.validateUrl(expectedUrl);
     });

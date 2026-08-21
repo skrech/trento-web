@@ -1,8 +1,12 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import MockAdapter from 'axios-mock-adapter';
 import {
   networkClient,
   unrecoverableAuthError,
   withWindowReference,
+  handleUnrecoverableAuthError,
 } from '@lib/network';
 import {
   clearCredentialsFromStore,
@@ -20,11 +24,14 @@ describe('networkClient', () => {
     axiosMock.reset();
     mockAuthClient.reset();
     jest.spyOn(console, 'error').mockImplementation(() => null);
+    jest.spyOn(console, 'warn').mockImplementation(() => null);
   });
 
   afterEach(() => {
     /* eslint-disable-next-line */
     console.error.mockRestore();
+    /* eslint-disable-next-line */
+    console.warn.mockRestore();
     clearCredentialsFromStore();
   });
 
@@ -184,5 +191,27 @@ describe('networkClient', () => {
         });
       }
     });
+  });
+});
+
+describe('handleUnrecoverableAuthError', () => {
+  let mockAssign;
+
+  beforeEach(() => {
+    mockAssign = jest.fn();
+    withWindowReference({ location: { pathname: '/foo', assign: mockAssign } });
+    jest.spyOn(console, 'warn').mockImplementation(() => null);
+  });
+
+  afterEach(() => {
+    withWindowReference(window);
+    /* eslint-disable-next-line */
+    console.warn.mockRestore();
+  });
+
+  it('redirects to /session/new with the current pathname as query parameter', () => {
+    handleUnrecoverableAuthError();
+
+    expect(mockAssign).toHaveBeenCalledWith('/session/new?request_path=%2Ffoo');
   });
 });

@@ -1,7 +1,11 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 export const selectedHost = {
   agentId: '9cd46919-5f19-59aa-993e-cf3736c71053',
   agentVersion: '2.1.0',
   hostName: 'vmhdbprd01',
+  health: 'passing',
   clusterName: 'hana_cluster_3',
   clusterId: '469e7be5-4e20-5007-b044-c6f540a87493',
   ipAddresses: '10.80.1.11/24, 10.80.1.13/24',
@@ -46,9 +50,9 @@ export const selectedHost = {
     provider: 'VMware',
   },
   sapInstance: {
-    id: '6c9208eb-a5bb-57ef-be5c-6422dedab602',
+    status: '',
     sid: 'HDP',
-    type: 'database',
+    type: 'Database',
     features: ['HDB', 'HDB_WORKER'],
     instanceNumber: '10',
   },
@@ -60,8 +64,8 @@ export const selectedHost = {
       type: 'internal',
       status: 'Registered',
       subscriptionStatus: 'ACTIVE',
-      startsAt: '2021-10-18 06:23:46 UTC',
-      expiresAt: '2026-10-18 06:23:46 UTC',
+      startsAt: '18 Oct 2021, 06:23:46',
+      expiresAt: '18 Oct 2026, 06:23:46',
     },
     {
       id: 'sle-module-server-applications',
@@ -74,4 +78,8 @@ export const selectedHost = {
       expiresAt: '',
     },
   ],
+};
+
+export const attachedSapInstance = {
+  id: '6c9208eb-a5bb-57ef-be5c-6422dedab602',
 };

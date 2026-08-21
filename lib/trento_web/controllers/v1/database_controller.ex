@@ -1,6 +1,10 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule TrentoWeb.V1.DatabaseController do
   use TrentoWeb, :controller
   use OpenApiSpex.ControllerSpecs
+  use Trento.AI.ControllerSpecs
 
   alias Trento.Repo
 
@@ -54,6 +58,8 @@ defmodule TrentoWeb.V1.DatabaseController do
         {"Comprehensive list of all HANA Databases discovered on the target infrastructure for monitoring and management.",
          "application/json", Schema.Database.DatabasesCollection}
     ]
+
+  ai_tool :database_list, display_text: "List HANA databases"
 
   def list_databases(conn, _) do
     databases = Databases.get_all_databases()

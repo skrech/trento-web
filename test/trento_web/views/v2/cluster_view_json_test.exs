@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule TrentoWeb.V2.ClusterJSONTest do
   use TrentoWeb.ConnCase, async: true
   import Trento.Factory
@@ -60,6 +63,7 @@ defmodule TrentoWeb.V2.ClusterJSONTest do
 
     Enum.each(resources, fn resource ->
       refute Map.has_key?(resource, :sid)
+      refute Map.has_key?(resource, :__struct__)
     end)
   end
 end

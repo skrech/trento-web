@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 export * from './base_po.js';
 import * as basePage from './base_po.js';
 
@@ -31,6 +34,7 @@ const hddDatabase = {
     instanceNumber: '10',
     row: 0,
   },
+  agentId: '13e8c25c-3180-5a9a-95c8-51ec38e50cfc',
 };
 
 // Selectors
@@ -60,6 +64,11 @@ const getCleanUpButtonByIdAndInstanceIndex = (id, index) =>
     index + 1
   }) span:contains("Clean up")`;
 
+const getHddDatabaseInstanceRow = (index) =>
+  `${hddDatabaseCell} + tr div[class="table-row-group"] div[class*="table-row border-b"]:nth-child(${
+    index + 1
+  })`;
+
 export const visit = () => basePage.visit('/databases');
 
 // UI Validations
@@ -78,14 +87,15 @@ export const bothDatabaseInstancesAreDisplayed = () => {
   return cy.get(databaseInstance2).should('be.visible');
 };
 
-export const activePillIsDisplayedInTheRightHost = () => {
-  return cy.wrap(hdqDatabase.instances).each((instance) => {
+export const activePillIsDisplayedInTheRightHost = () =>
+  cy.wrap(hdqDatabase.instances).each((instance) => {
     cy.get(`div.table-row:contains("${instance.name}")`).within(() => {
       const isHostActive = instance.state === 'ACTIVE';
-      cy.get(activePill).should(isHostActive ? 'be.visible' : 'not.exist');
+      return cy
+        .get(activePill)
+        .should(isHostActive ? 'be.visible' : 'not.exist');
     });
   });
-};
 
 export const deletedSapSystemToasterIsDisplayed = () =>
   cy.get(deletedSapSystemToaster).should('be.visible');
@@ -116,6 +126,22 @@ export const cleanUpButtonIsNotDisplayed = () => {
 
   return cy.get(cleanUpButtonSelector).should('not.exist', { timeout: 15000 });
 };
+
+export const hddDatabaseDataIsMarkedAsStale = () =>
+  basePage.elementIsMarkedStale(hddDatabaseCell);
+
+export const hddDatabaseDataIsMarkedInSync = () =>
+  basePage.elementIsMarkedInSync(hddDatabaseCell);
+
+export const hddDatabaseInstanceRowIsMarkedAsStale = () =>
+  basePage.elementIsMarkedStale(
+    getHddDatabaseInstanceRow(hddDatabase.instance.row)
+  );
+
+export const hddDatabaseInstanceRowIsMarkedInSync = () =>
+  basePage.elementIsMarkedInSync(
+    getHddDatabaseInstanceRow(hddDatabase.instance.row)
+  );
 
 // UI Interactions
 
@@ -161,17 +187,26 @@ export const deregisterNwqSystemAscsInstance = () =>
 export const restoreHdqDatabasePrimaryInstance = () =>
   basePage.loadScenario(`host-${hdqDatabase.instances[0].name}-restore`);
 
-export const markHddDatabaseAsAbsent = () => {
+export const markHddDatabaseAsAbsent = () =>
   basePage.loadScenario(
     `sap-systems-overview-${hddDatabase.sid}-${hddDatabase.instance.instanceNumber}-absent`
   );
-};
 
-export const markHddDatabaseAsPresent = () => {
+export const markHddDatabaseAsPresent = () =>
   basePage.loadScenario(
     `sap-systems-overview-${hddDatabase.sid}-${hddDatabase.instance.instanceNumber}-present`
   );
-};
+
+export const startHddDatabaseAgentHeartbeat = () =>
+  basePage.startAgentsHeartbeat([hddDatabase.agentId]);
+
+export const startAllDatabasesAgentsHeartbeat = () =>
+  apiGetDatabaseAgentIds().then((agentIds) =>
+    basePage.startAgentsHeartbeat(agentIds)
+  );
+
+export const stopHddDatabaseAgentHeartbeat = () =>
+  basePage.stopAgentsHeartbeat([hddDatabase.agentId]);
 
 export const apiCreateUserWithDatabaseTagsAbilities = () =>
   basePage.apiCreateUserWithAbilities([
@@ -183,8 +218,8 @@ export const apiCreateUserWithCleanupAbilities = () =>
     { name: 'cleanup', resource: 'database_instance' },
   ]);
 
-const apiGetDatabases = () => {
-  return basePage.apiLogin().then(({ accessToken }) => {
+const apiGetDatabases = () =>
+  basePage.apiLogin().then(({ accessToken }) => {
     const url = '/api/v1/databases';
     return cy.request({
       method: 'GET',
@@ -194,24 +229,33 @@ const apiGetDatabases = () => {
       },
     });
   });
-};
 
-export const apiRemoveAllDatabaseTags = () => {
-  apiGetDatabases().then((response) => {
-    const databaseTags = basePage.getResourceTags(response.body);
-    Object.entries(databaseTags).forEach(([databaseId, tags]) => {
-      tags.forEach((tag) => apiRemoveTagByDatabaseId(databaseId, tag));
-    });
-  });
-  return basePage.refresh();
-};
+const apiGetDatabaseAgentIds = () =>
+  apiGetDatabases().then(({ body }) => [
+    ...new Set(
+      body.flatMap((database) =>
+        database.database_instances.map((instance) => instance.host_id)
+      )
+    ),
+  ]);
 
-const apiRemoveTagByDatabaseId = (databaseId, tagId) => {
-  return basePage.apiLogin().then(({ accessToken }) =>
+export const apiRemoveAllDatabaseTags = () =>
+  apiGetDatabases()
+    .then((response) => {
+      const databaseTags = basePage.getResourceTags(response.body);
+      return cy
+        .wrap(Object.entries(databaseTags))
+        .each(([databaseId, tags]) =>
+          cy.wrap(tags).each((tag) => apiRemoveTagByDatabaseId(databaseId, tag))
+        );
+    })
+    .then(() => basePage.refresh());
+
+const apiRemoveTagByDatabaseId = (databaseId, tagId) =>
+  basePage.apiLogin().then(({ accessToken }) =>
     cy.request({
       url: `/api/v1/databases/${databaseId}/tags/${tagId}`,
       method: 'DELETE',
       auth: { bearer: accessToken },
     })
   );
-};

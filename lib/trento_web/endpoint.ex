@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule TrentoWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :trento
 
@@ -11,7 +14,7 @@ defmodule TrentoWeb.Endpoint do
   ]
 
   socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
-  socket "/socket", TrentoWeb.UserSocket, websocket: true, longpoll: false
+  socket "/socket", TrentoWeb.UserSocket, websocket: [connect_info: [:uri]]
 
   # Serve at "/" the static files from "priv/static" directory.
   #

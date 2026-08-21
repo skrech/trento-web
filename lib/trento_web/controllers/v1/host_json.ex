@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule TrentoWeb.V1.HostJSON do
   def hosts(%{hosts: hosts}), do: Enum.map(hosts, &host(%{host: &1}))
 
@@ -58,7 +61,11 @@ defmodule TrentoWeb.V1.HostJSON do
     broadcast_host(%{host: host})
   end
 
-  def heartbeat_result(%{host: %{id: id, hostname: hostname}}), do: %{id: id, hostname: hostname}
+  def heartbeat_result(%{host: %{id: id, hostname: hostname, stale_at: nil}}),
+    do: %{id: id, hostname: hostname}
+
+  def heartbeat_result(%{host: %{id: id, hostname: hostname, stale_at: stale_at}}),
+    do: %{id: id, hostname: hostname, stale_at: stale_at}
 
   def saptune_status_updated(%{
         host: %{id: id, saptune_status: status, hostname: hostname}

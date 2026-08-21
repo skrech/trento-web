@@ -1,9 +1,13 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useState, useEffect } from 'react';
 import { capitalize, get, noop } from 'lodash';
 
 import { OPERATION_NOT_ALLOWED_HOST } from '@lib/operations';
 import { isHeartbeatPassing } from '@lib/model/hosts';
-import { getEnsaVersionLabel } from '@lib/model/sapSystems';
+import { getEnsaVersionLabel, APPLICATION_TYPE } from '@lib/model/sapSystems';
+import { formatDateTime } from '@lib/timezones';
 
 import DottedPagination from '@common/DottedPagination';
 import ListView from '@common/ListView';
@@ -88,6 +92,7 @@ function AscsErsClusterDetails({
   catalog,
   lastExecution,
   userAbilities = [],
+  timezone,
   navigate = () => {},
   getClusterHostOperations = noop,
 }) {
@@ -143,7 +148,9 @@ function AscsErsClusterDetails({
 
               {
                 title: 'CIB last written',
-                content: cibLastWritten || '-',
+                content: cibLastWritten
+                  ? formatDateTime(cibLastWritten, timezone)
+                  : '-',
               },
             ]}
           />
@@ -160,7 +167,7 @@ function AscsErsClusterDetails({
                 render: (content) => (
                   <SapSystemLink
                     sapSystemId={content?.id}
-                    systemType="sap_systems"
+                    systemType={APPLICATION_TYPE}
                   >
                     {content?.sid}
                   </SapSystemLink>
@@ -194,6 +201,7 @@ function AscsErsClusterDetails({
           <CheckResultsOverview
             data={executionData}
             catalogDataEmpty={catalogData?.length === 0}
+            timezone={timezone}
             loading={catalogLoading || executionLoading}
             error={catalogError || executionError}
             onCheckClick={(health) =>

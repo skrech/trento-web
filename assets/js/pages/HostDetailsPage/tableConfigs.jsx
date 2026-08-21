@@ -1,5 +1,13 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
-import { Features } from '@pages/SapSystemDetails';
+import { capitalize } from 'lodash';
+import classNames from 'classnames';
+
+import { STALE_ROW } from '@lib/tables';
+import SapSystemLink from '@common/SapSystemLink';
+import { Features, InstanceStatus } from '@pages/SapSystemDetails';
 
 import { getInstanceID } from '@state/instances';
 
@@ -42,16 +50,39 @@ export const subscriptionsTableConfiguration = {
   ],
 };
 
-export const sapInstancesTableConfiguration = {
+export const getSapInstancesTableConfiguration = ({ userTimezone }) => ({
   usePadding: false,
+  rowClassName: ({ stale_at, absent_at }) =>
+    classNames({
+      [STALE_ROW]: !!stale_at,
+      'text-gray-600': !!absent_at,
+    }),
   columns: [
     {
-      title: 'ID',
-      key: '',
-      render: (_content, item) => getInstanceID(item),
+      title: 'Status',
+      key: 'status',
+      render: (content, item) => (
+        <InstanceStatus
+          status={content}
+          absent={!!item.absent_at}
+          staleAt={item.stale_at}
+          timezone={userTimezone}
+        />
+      ),
     },
-    { title: 'SID', key: 'sid' },
-    { title: 'Type', key: 'type' },
+    {
+      title: 'SID',
+      key: 'sid',
+      render: (_content, item) => (
+        <SapSystemLink
+          systemType={item?.type}
+          sapSystemId={getInstanceID(item)}
+        >
+          {item?.sid}
+        </SapSystemLink>
+      ),
+    },
+    { title: 'Type', key: 'type', render: capitalize },
     {
       title: 'Features',
       key: 'features',
@@ -59,4 +90,4 @@ export const sapInstancesTableConfiguration = {
     },
     { title: 'Instance Number', key: 'instance_number' },
   ],
-};
+});

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import posthog from 'posthog-js';
 import { v5 as uuidv5 } from 'uuid';
 import { get, has, noop } from 'lodash';
@@ -10,6 +13,28 @@ const DEFAULT_OPTS = {
   opt_out_capturing_by_default: true,
   capture_pageview: false,
   disable_persistence: true,
+  // mask $autocapture event `text` field for elements with
+  // `ph-mask` class
+  before_send: (event) => {
+    if (!event) {
+      return null;
+    }
+
+    if (event.event !== '$autocapture') return event;
+
+    const elements = event.properties.$elements_chain;
+    const shouldMask = elements.includes('ph-mask');
+    if (shouldMask) {
+      const textToMask = event.properties.$el_text;
+      event.properties.$elements_chain = elements.replace(
+        `"${textToMask}"`,
+        '"*****"'
+      );
+      event.properties.$el_text = '*****';
+    }
+
+    return event;
+  },
 };
 
 const analyticsEnabledConfig = getFromConfig('analyticsEnabled');
@@ -19,7 +44,7 @@ const installationID = getFromConfig('installationID');
 // The GTM container must have a Tag with Custom HTML type with the next
 // content:
 {
-  /* 
+  /*
 <script>
   var posthogConfig = {
     apiKey: <<POSTHOG_API_KEY>>,
@@ -28,7 +53,7 @@ const installationID = getFromConfig('installationID');
       // any other additional custom configuration
     }
   }
-</script> 
+</script>
 */
 }
 const getGtmConfig = () => window.posthogConfig;

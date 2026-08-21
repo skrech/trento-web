@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Databases.PolicyTest do
   use ExUnit.Case
 
@@ -56,6 +59,12 @@ defmodule Trento.Databases.PolicyTest do
 
       test "should allow #{operation} operation if the user has all:all ability" do
         user = %User{abilities: [%Ability{name: "all", resource: "all"}]}
+
+        assert Policy.authorize(@operation, user, DatabaseReadModel)
+      end
+
+      test "should allow #{operation} operation if the user has operation:all ability" do
+        user = %User{abilities: [%Ability{name: "operation", resource: "all"}]}
 
         assert Policy.authorize(@operation, user, DatabaseReadModel)
       end

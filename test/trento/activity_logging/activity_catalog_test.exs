@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.ActivityLog.ActivityCatalogTest do
   @moduledoc false
 
@@ -41,7 +44,10 @@ defmodule Trento.ActivityLog.ActivityCatalogTest do
         :cluster_host_operation_requested,
         :application_instance_operation_requested,
         :sap_system_operation_requested,
-        :database_operation_requested
+        :database_operation_requested,
+        :ai_configuration_creation,
+        :ai_configuration_modification,
+        :ai_configuration_deletion
       ]
 
       connection_activity_catalog = ActivityCatalog.connection_activities()
@@ -92,7 +98,7 @@ defmodule Trento.ActivityLog.ActivityCatalogTest do
         :database_rolled_up,
         :database_instance_system_replication_changed,
         :database_instance_marked_absent,
-        :database_instance_health_changed,
+        :database_instance_status_changed,
         :database_instance_marked_present,
         :database_instance_deregistered,
         :database_tenants_updated,
@@ -110,7 +116,7 @@ defmodule Trento.ActivityLog.ActivityCatalogTest do
         :application_instance_marked_present,
         :sap_system_restored,
         :sap_system_deregistered,
-        :application_instance_health_changed,
+        :application_instance_status_changed,
         :sap_system_roll_up_requested,
         :sap_system_updated,
         :application_instance_moved,
@@ -370,6 +376,24 @@ defmodule Trento.ActivityLog.ActivityCatalogTest do
         connection_info: {TrentoWeb.V1.DatabaseController, :database_start},
         interesting_statuses: 202,
         not_interesting_statuses: [400, 401, 403, 404, 500]
+      },
+      %{
+        activity: :ai_configuration_creation,
+        connection_info: {TrentoWeb.V1.AIConfigurationController, :create_ai_configuration},
+        interesting_statuses: 201,
+        not_interesting_statuses: [400, 401, 403, 404, 500]
+      },
+      %{
+        activity: :ai_configuration_modification,
+        connection_info: {TrentoWeb.V1.AIConfigurationController, :update_ai_configuration},
+        interesting_statuses: 200,
+        not_interesting_statuses: [400, 401, 403, 404, 500]
+      },
+      %{
+        activity: :ai_configuration_deletion,
+        connection_info: {TrentoWeb.V1.AIConfigurationController, :clear_ai_configuration},
+        interesting_statuses: 204,
+        not_interesting_statuses: [400, 401, 403, 404, 500]
       }
     ]
 
@@ -451,7 +475,10 @@ defmodule Trento.ActivityLog.ActivityCatalogTest do
     test "should ignore specific domain events" do
       excluded_events = [
         :host_checks_selected_event,
-        :cluster_checks_selected_event
+        :cluster_checks_selected_event,
+        :cluster_host_data_marked_stale_event,
+        :cluster_host_data_marked_in_sync_event,
+        :sap_system_database_stale_at_changed_event
       ]
 
       for excluded_event <- excluded_events do

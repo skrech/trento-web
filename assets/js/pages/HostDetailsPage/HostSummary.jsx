@@ -1,9 +1,11 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 import { chunk } from 'lodash';
-import { format } from 'date-fns';
-import { utc } from '@date-fns/utc';
+import { EOS_INFO_OUTLINED } from 'eos-icons-react';
 
-import HealthIcon from '@common/HealthIcon';
+import { formatDateTime } from '@lib/timezones';
 import ListView from '@common/ListView';
 import Tooltip from '@common/Tooltip';
 
@@ -26,7 +28,7 @@ const renderIpAddresses = (ipAddresses) => {
   return (
     <div className="flex flex-row">
       <Tooltip content={prepareTooltipContent(ipAddresses)}>
-        <HealthIcon health="absent" />
+        <EOS_INFO_OUTLINED size="l" className="hover:opacity-75 fill-black" />
       </Tooltip>
       <span className="truncate ml-1">{joinedIpAddresses}</span>
     </div>
@@ -39,11 +41,10 @@ function HostSummary({
   cluster,
   ipAddresses,
   lastBootTimestamp,
+  timezone,
 }) {
   const formattedLastBoot = lastBootTimestamp
-    ? `${format(new Date(lastBootTimestamp), 'dd MMM yyyy, HH:mm:ss', {
-        in: utc,
-      })} GMT`
+    ? formatDateTime(lastBootTimestamp, timezone)
     : 'N/A';
 
   return (

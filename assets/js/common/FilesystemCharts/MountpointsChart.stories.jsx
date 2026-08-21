@@ -1,4 +1,8 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
+
 import MountpointsChart from './MountpointsChart';
 
 export default {
@@ -8,6 +12,10 @@ export default {
     mountpoints: {
       description: 'An object containing information about each mountpoint',
       control: { type: 'object' },
+    },
+    className: {
+      description: 'Additional CSS classes applied to the chart container',
+      control: { type: 'text' },
     },
   },
   render: (args) => <MountpointsChart {...args} className="w-full h-[400px]" />,
@@ -20,21 +28,25 @@ export const Default = {
         usedBytes: 8589934592, // 8 GB
         availBytes: 12884901888, // 12 GB
         device: '/dev/sda1',
+        fsType: 'btrfs',
       },
       '/home': {
         usedBytes: 53687091200, // 50 GB
         availBytes: 53687091200, // 50 GB
         device: '/dev/sda2',
+        fsType: 'xfs',
       },
       '/boot/efi': {
         usedBytes: 52428800, // 50 MB
         availBytes: 471859200, // 450 MB
         device: '/dev/nvme0n1p1',
+        fsType: 'vfat',
       },
       '/var/log': {
         usedBytes: 2147483648, // 2GB
         availBytes: 8589934592, // 8GB
         device: '/dev/mapper/system-var_log',
+        fsType: 'xfs',
       },
     },
   },
@@ -48,6 +60,7 @@ export const FullDisk = {
         usedBytes: 1099511627776, // 1 TB
         availBytes: 1073741824, // 1 GB
         device: '/dev/sdb1',
+        fsType: 'xfs',
       },
     },
   },
@@ -55,6 +68,7 @@ export const FullDisk = {
 
 export const NoData = {
   args: {
+    ...Default.args,
     mountpoints: {},
   },
 };

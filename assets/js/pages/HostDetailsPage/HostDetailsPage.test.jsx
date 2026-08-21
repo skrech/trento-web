@@ -1,7 +1,9 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import 'intersection-observer';
 import '@testing-library/jest-dom';
 import { networkClient } from '@lib/network';
 import MockAdapter from 'axios-mock-adapter';
@@ -24,7 +26,7 @@ describe('HostDetailsPage', () => {
     axiosMock.onGet(/\/api\/v1\/hosts.*/gm).reply(200, {});
   });
 
-  it('Renders SUSE Manager unknown status', async () => {
+  it('Renders SUSE Multi-Linux Manager unknown status', async () => {
     const user = userEvent.setup();
 
     const host = hostFactory.build();
@@ -76,7 +78,7 @@ describe('HostDetailsPage', () => {
     ).toBeVisible();
   });
 
-  it('Renders SUSE Manager error for host not found', async () => {
+  it('Renders SUSE Multi-Linux Manager error for host not found', async () => {
     const user = userEvent.setup();
 
     const host = hostFactory.build();
@@ -116,21 +118,21 @@ describe('HostDetailsPage', () => {
       .closest('div');
 
     expect(relevantPatchesElement).toHaveTextContent(
-      'Relevant Patches Host not found in SUSE Manager'
+      'Relevant Patches Host not found in SUSE Multi-Linux Manager'
     );
     expect(upgradablePackagesElement).toHaveTextContent(
-      'Upgradable Packages Host not found in SUSE Manager'
+      'Upgradable Packages Host not found in SUSE Multi-Linux Manager'
     );
 
     await user.hover(relevantPatchesElement);
     expect(
       screen.queryByText(
-        'Contact your SUSE Manager admin to ensure the host is managed by SUSE Manager'
+        'Contact your SUSE Multi-Linux Manager admin to ensure the host is managed by SUSE Multi-Linux Manager'
       )
     ).toBeVisible();
   });
 
-  it('Renders SUSE Manager error for connection not working', async () => {
+  it('Renders SUSE Multi-Linux Manager error for connection not working', async () => {
     const user = userEvent.setup();
 
     const host = hostFactory.build();
@@ -170,15 +172,51 @@ describe('HostDetailsPage', () => {
       .closest('div');
 
     expect(relevantPatchesElement).toHaveTextContent(
-      'Relevant Patches Connection to SUSE Manager not working'
+      'Relevant Patches Connection to SUSE Multi-Linux Manager not working'
     );
     expect(upgradablePackagesElement).toHaveTextContent(
-      'Upgradable Packages Connection to SUSE Manager not working'
+      'Upgradable Packages Connection to SUSE Multi-Linux Manager not working'
     );
 
     await user.hover(relevantPatchesElement);
     expect(
-      screen.queryByText('Please review SUSE Manager settings')
+      screen.queryByText('Please review SUSE Multi-Linux Manager settings')
     ).toBeVisible();
+  });
+
+  it('passes user timezone to host details rendering', async () => {
+    const host = hostFactory.build({
+      last_boot_timestamp: '2024-01-10T23:30:00Z',
+    });
+    const { id: hostID } = host;
+
+    const state = {
+      ...defaultInitialState,
+      user: {
+        ...defaultInitialState.user,
+        timezone: 'Pacific/Kiritimati',
+      },
+      hostsList: {
+        hosts: [host],
+      },
+      lastExecutions: { data: null, loading: false, errors: null },
+      softwareUpdates: {
+        settingsConfigured: false,
+        softwareUpdates: {},
+      },
+    };
+
+    const [StatefulHostDetails] = withState(<HostDetailsPage />, state);
+
+    await act(async () =>
+      renderWithRouterMatch(StatefulHostDetails, {
+        path: 'hosts/:hostID',
+        route: `/hosts/${hostID}`,
+      })
+    );
+
+    expect(screen.getByText('Last Boot').nextSibling.textContent).toBe(
+      '11 Jan 2024, 13:30:00'
+    );
   });
 });

@@ -1,0 +1,30 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
+import { getProviderLabel, getProviderIcon } from './providers';
+
+describe('providers', () => {
+  describe('getProviderLabel', () => {
+    it('should return the provider label', () => {
+      expect(getProviderLabel('googleai')).toBe('Google Gemini');
+      expect(getProviderLabel('openai')).toBe('OpenAI GPT');
+      expect(getProviderLabel('anthropic')).toBe('Anthropic Claude');
+    });
+
+    it('should return the provider name if no label is found', () => {
+      expect(getProviderLabel('unknown')).toBe('unknown');
+    });
+  });
+
+  describe('getProviderIcon', () => {
+    it('should return the provider icon', () => {
+      expect(getProviderIcon('googleai')).toBeDefined();
+      expect(getProviderIcon('openai')).toBeDefined();
+      expect(getProviderIcon('anthropic')).toBeDefined();
+    });
+
+    it('should return null if no icon is found', () => {
+      expect(getProviderIcon('unknown')).toBeUndefined();
+    });
+  });
+});

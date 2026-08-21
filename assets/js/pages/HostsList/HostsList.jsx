@@ -1,9 +1,14 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useState } from 'react';
 
 import { useSearchParams } from 'react-router';
 import { useSelector, useDispatch } from 'react-redux';
 import { EOS_WARNING_OUTLINED } from 'eos-icons-react';
 import { uniqBy } from 'lodash';
+import classNames from 'classnames';
+import semver from 'semver';
 
 import CleanUpButton from '@common/CleanUpButton';
 import HealthIcon from '@common/HealthIcon';
@@ -18,20 +23,26 @@ import Tooltip from '@common/Tooltip';
 
 import { post, del } from '@lib/network';
 import { agentVersionWarning } from '@lib/agent';
+import { STALE_ROW } from '@lib/tables';
 
 import ClusterLink from '@pages/ClusterDetails/ClusterLink';
 import DeregistrationModal from '@pages/DeregistrationModal';
 import HealthSummary from '@pages/HealthSummary';
 import { getCounters } from '@pages/HealthSummary/summarySelection';
-import { buildCidrNotation } from '@pages/HostDetailsPage/HostDetails';
 
 import { addTagToHost, removeTagFromHost, deregisterHost } from '@state/hosts';
-import { getAllSAPInstances } from '@state/selectors/sapSystem';
 import { getUserProfile } from '@state/selectors/user';
+import { hostsListSelector } from '@state/selectors/host';
 import { getInstanceID } from '@state/instances';
 
-const getInstancesByHost = (instances, hostId) =>
-  instances.filter((instance) => instance.host_id === hostId);
+const compareAgentVersions = (a, b) => {
+  const coercedA = semver.coerce(a);
+  const coercedB = semver.coerce(b);
+  if (coercedA && coercedB) {
+    return semver.compare(coercedA, coercedB);
+  }
+  return String(a).localeCompare(String(b));
+};
 
 const addTag = (tag, hostId) => {
   post(`/hosts/${hostId}/tags`, {
@@ -44,10 +55,8 @@ const removeTag = (tag, hostId) => {
 };
 
 function HostsList() {
-  const hosts = useSelector((state) => state.hostsList.hosts);
-  const clusters = useSelector((state) => state.clustersList.clusters);
-  const allInstances = useSelector(getAllSAPInstances);
-  const { abilities } = useSelector(getUserProfile);
+  const hostsData = useSelector(hostsListSelector);
+  const { abilities, timezone } = useSelector(getUserProfile);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [cleanUpModalOpen, setCleanUpModalOpen] = useState(false);
@@ -65,17 +74,28 @@ function HostsList() {
     dispatch(deregisterHost({ id, hostname }));
   };
 
+  const counters = getCounters(hostsData || []);
+
   const config = {
     pagination: true,
     usePadding: false,
+    rowClassName: ({ staleAt }) =>
+      classNames({
+        [STALE_ROW]: !!staleAt,
+      }),
     columns: [
       {
         title: 'Health',
         key: 'health',
         filter: true,
         filterFromParams: true,
-        render: (_content, { health }) => (
-          <HealthIcon health={health} centered />
+        render: (health, { staleAt }) => (
+          <HealthIcon
+            health={health}
+            staleAt={staleAt}
+            timezone={timezone}
+            centered
+          />
         ),
       },
       {
@@ -91,7 +111,7 @@ function HostsList() {
         key: 'ip',
         render: (content) =>
           content.map((ip) => (
-            <div key={ip} className="text-sm text-gray-900">
+            <div key={ip} className="text-sm">
               {ip}
             </div>
           )),
@@ -118,24 +138,29 @@ function HostsList() {
         filterFromParams: true,
         filter: (filter, key) => (element) =>
           element[key].some((sid) => filter.includes(sid)),
-        render: (sids, { sap_systems }) => {
-          const sidsArray = uniqBy(sap_systems, getInstanceID);
-          return sidsArray.map((instance, index) => (
-            <span key={`${sids[index]}-${instance?.id}`}>
-              <SapSystemLink
-                key={`${getInstanceID(instance)}-${instance?.id}`}
-                systemType={instance?.type}
-                sapSystemId={getInstanceID(instance)}
-              >
-                {instance?.sid}
-              </SapSystemLink>{' '}
-            </span>
-          ));
+        render: (_sids, { sap_systems }) => {
+          const instances = uniqBy(sap_systems, getInstanceID);
+          return instances.map((instance) => {
+            const sapSystemId = getInstanceID(instance);
+            return (
+              <span key={sapSystemId}>
+                <SapSystemLink
+                  systemType={instance?.type}
+                  sapSystemId={sapSystemId}
+                >
+                  {instance?.sid}
+                </SapSystemLink>{' '}
+              </span>
+            );
+          });
         },
       },
       {
         title: 'Agent version',
         key: 'agent_version',
+        filter: true,
+        filterFromParams: true,
+        filterOptionsSorter: compareAgentVersions,
         render: (content) => {
           const warning = agentVersionWarning(content);
           if (warning) {
@@ -214,27 +239,6 @@ function HostsList() {
     ],
   };
 
-  const data = hosts.map((host) => {
-    const cluster = clusters.find((c) => c.id === host.cluster_id);
-    const sapSystemList = getInstancesByHost(allInstances, host.id);
-
-    return {
-      health: host.health,
-      hostname: host.hostname,
-      ip: buildCidrNotation(host.ip_addresses, host.netmasks),
-      provider: host.provider,
-      sid: sapSystemList.map((sapSystem) => sapSystem.sid),
-      cluster,
-      agent_version: host.agent_version,
-      id: host.id,
-      tags: (host.tags && host.tags.map((tag) => tag.value)) || [],
-      sap_systems: sapSystemList,
-      deregisterable: host.deregisterable,
-      deregistering: host.deregistering,
-    };
-  });
-
-  const counters = getCounters(data || []);
   return (
     <>
       <PageHeader className="font-bold">Hosts</PageHeader>
@@ -252,7 +256,7 @@ function HostsList() {
         <HealthSummary {...counters} className="px-4 py-2" />
         <Table
           config={config}
-          data={data}
+          data={hostsData}
           searchParams={searchParams}
           setSearchParams={setSearchParams}
         />

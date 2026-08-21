@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Infrastructure.Commanded.EventHandlers.DatabaseDeregistrationEventHandlerTest do
   use ExUnit.Case
   use Trento.DataCase
@@ -27,16 +30,14 @@ defmodule Trento.Infrastructure.Commanded.EventHandlers.DatabaseDeregistrationEv
     expect(Trento.Commanded.Mock, :dispatch, fn %DeregisterSapSystem{
                                                   sap_system_id: ^first_sap_system_id,
                                                   deregistered_at: ^deregistered_at
-                                                },
-                                                _ ->
+                                                } ->
       :ok
     end)
 
     expect(Trento.Commanded.Mock, :dispatch, fn %DeregisterSapSystem{
                                                   sap_system_id: ^second_sap_system_id,
                                                   deregistered_at: ^deregistered_at
-                                                },
-                                                _ ->
+                                                } ->
       :ok
     end)
 
@@ -44,12 +45,14 @@ defmodule Trento.Infrastructure.Commanded.EventHandlers.DatabaseDeregistrationEv
   end
 
   test "should dispatch DeregisterSapSystem commands when a tenant is removed" do
-    [%{name: tenant1}, %{name: tenant2}] = tenants = build_list(2, :tenant)
+    tenant1 = "kept-tenant"
+    tenant2 = "removed-tenant"
+    tenants = [build(:tenant, name: tenant1), build(:tenant, name: tenant2)]
     %{id: database_id} = insert(:database, tenants: tenants)
 
     insert(:sap_system, database_id: database_id, tenant: tenant1)
     %{id: second_sap_system_id} = insert(:sap_system, database_id: database_id, tenant: tenant2)
-    insert(:sap_system, database_id: database_id)
+    insert(:sap_system, database_id: database_id, tenant: "unaffected-tenant")
 
     event = %DatabaseTenantsUpdated{
       database_id: database_id,
@@ -62,8 +65,7 @@ defmodule Trento.Infrastructure.Commanded.EventHandlers.DatabaseDeregistrationEv
     expect(Trento.Commanded.Mock, :dispatch, fn %DeregisterSapSystem{
                                                   sap_system_id: ^second_sap_system_id,
                                                   deregistered_at: ^deregistered_at
-                                                },
-                                                _ ->
+                                                } ->
       :ok
     end)
 

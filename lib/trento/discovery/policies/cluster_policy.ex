@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Discovery.Policies.ClusterPolicy do
   @moduledoc """
   This module contains functions to transform cluster related integration events into commands.
@@ -7,7 +10,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicy do
   require Trento.Clusters.Enums.ClusterType, as: ClusterType
   require Trento.Clusters.Enums.ClusterHostStatus, as: ClusterHostStatus
   require Trento.Clusters.Enums.HanaArchitectureType, as: HanaArchitectureType
-  require Trento.Enums.Health, as: Health
   require Trento.Clusters.Enums.AscsErsClusterRole, as: AscsErsClusterRole
   require Trento.Clusters.Enums.HanaScenario, as: HanaScenario
   require Trento.Clusters.Enums.SapInstanceResourceType, as: SapInstanceResourceType
@@ -120,7 +122,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicy do
       resources_number: parse_resources_number(payload),
       hosts_number: parse_hosts_number(payload),
       details: cluster_details,
-      discovered_health: parse_cluster_health(cluster_details, cluster_type),
       cib_last_written: parse_cib_last_written(payload),
       provider: provider,
       state: state
@@ -333,10 +334,11 @@ defmodule Trento.Discovery.Policies.ClusterPolicy do
            cluster_type: cluster_type,
            hana_architecture_type: hana_architecture_type,
            cib: %{
-             configuration: %{
-               resources: resources,
-               crm_config: %{cluster_properties: cluster_properties}
-             }
+             configuration:
+               %{
+                 resources: resources,
+                 crm_config: %{cluster_properties: cluster_properties}
+               } = configuration
            },
            crmmon:
              %{
@@ -348,6 +350,8 @@ defmodule Trento.Discovery.Policies.ClusterPolicy do
          },
          sid
        ) do
+    mm_nodes = majority_maker_nodes(configuration)
+
     Enum.map(nodes, fn %{name: name} = node ->
       attributes =
         nodes_with_attributes
@@ -386,7 +390,8 @@ defmodule Trento.Discovery.Policies.ClusterPolicy do
         virtual_ip: virtual_ip,
         nameserver_actual_role: nameserver_actual_role,
         indexserver_actual_role: indexserver_actual_role,
-        status: parse_node_status(node)
+        status: parse_node_status(node),
+        is_majority_maker: MapSet.member?(mm_nodes, name)
       }
 
       hana_status =
@@ -1144,29 +1149,6 @@ defmodule Trento.Discovery.Policies.ClusterPolicy do
   defp generate_cluster_id(nil), do: nil
   defp generate_cluster_id(id), do: UUID.uuid5(@uuid_namespace, id)
 
-  defp parse_cluster_health(details, cluster_type)
-       when cluster_type in [ClusterType.hana_scale_up(), ClusterType.hana_scale_out()],
-       do: parse_hana_cluster_health(details)
-
-  defp parse_cluster_health(%{sap_systems: sap_systems}, ClusterType.ascs_ers()) do
-    Enum.find_value(sap_systems, Health.passing(), fn %{distributed: distributed} ->
-      if not distributed, do: Health.critical()
-    end)
-  end
-
-  defp parse_cluster_health(_, _), do: Health.unknown()
-
-  # Passing state if SR Health state is 4 and Sync state is SOK, everything else is critical
-  # If data is not present for some reason the state goes to unknown
-  defp parse_hana_cluster_health(%{sr_health_state: "4", secondary_sync_state: "SOK"}),
-    do: Health.passing()
-
-  defp parse_hana_cluster_health(%{sr_health_state: "", secondary_sync_state: ""}),
-    do: Health.unknown()
-
-  defp parse_hana_cluster_health(%{sr_health_state: _, secondary_sync_state: _}),
-    do: Health.critical()
-
   defp parse_hana_scenario([]), do: HanaScenario.performance_optimized()
 
   defp parse_hana_scenario(_), do: HanaScenario.cost_optimized()
@@ -1228,4 +1210,42 @@ defmodule Trento.Discovery.Policies.ClusterPolicy do
       if id == resource_id, do: instance_attributes
     end)
   end
+
+  @sap_resource_types ~w(SAPHana SAPHanaTopology SAPHanaController)
+
+  defp majority_maker_nodes(%{constraints: %{rsc_locations: rsc_locations}, resources: resources})
+       when is_list(rsc_locations) do
+    sap_resource_ids = sap_clone_master_ids(resources)
+
+    if MapSet.size(sap_resource_ids) == 0 do
+      MapSet.new()
+    else
+      rsc_locations
+      |> Enum.filter(fn %{score: score, resource: resource} ->
+        score == "-INFINITY" and MapSet.member?(sap_resource_ids, resource)
+      end)
+      |> Enum.group_by(fn %{node: node} -> node end)
+      |> Enum.filter(&banned_from_all_sap_resources?(&1, sap_resource_ids))
+      |> Enum.map(fn {node, _} -> node end)
+      |> MapSet.new()
+    end
+  end
+
+  defp majority_maker_nodes(_), do: MapSet.new()
+
+  defp banned_from_all_sap_resources?({_node, constraints}, sap_resource_ids) do
+    constrained_resources = MapSet.new(constraints, fn %{resource: r} -> r end)
+    MapSet.subset?(sap_resource_ids, constrained_resources)
+  end
+
+  defp sap_clone_master_ids(%{clones: clones, masters: masters}) do
+    (clones ++ masters)
+    |> Enum.filter(fn %{primitive: %{type: type}} ->
+      type in @sap_resource_types
+    end)
+    |> Enum.map(fn %{id: id} -> id end)
+    |> MapSet.new()
+  end
+
+  defp sap_clone_master_ids(_), do: MapSet.new()
 end

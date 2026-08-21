@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.ActivityLog.QueueEventParserTest do
   @moduledoc false
 
@@ -7,6 +10,7 @@ defmodule Trento.ActivityLog.QueueEventParserTest do
   import Trento.Factory
 
   alias Trento.ActivityLog.Logger.Parser.QueueEventParser
+  alias Trento.Checks.V1.CheckCustomValue
   alias Trento.Users
   alias Trento.Users.User
 
@@ -137,6 +141,55 @@ defmodule Trento.ActivityLog.QueueEventParserTest do
                  queue_event: operation_completed
                })
     end
+
+    test "should upgrade error message when operation request failed" do
+      scenarios = [
+        %{
+          error: :TARGETS_MISSING,
+          mapped_error: "The operation request failed because no valid target was specified"
+        },
+        %{
+          error: :ARGUMENTS_MISSING,
+          mapped_error:
+            "The operation request failed because one or more mandatory arguments are missing"
+        },
+        %{
+          error: :ALREADY_RUNNING,
+          mapped_error:
+            "The operation request cannot proceed due to concurrent operations executing on the selected target(s)"
+        },
+        %{
+          error: :UNKNOWN,
+          mapped_error: "The operation request terminated with an unexpected error"
+        }
+      ]
+
+      for %{error: error, mapped_error: mapped_error} <- scenarios do
+        %{
+          operation_id: operation_id,
+          group_id: group_id,
+          result: result
+        } =
+          operation_completed =
+          build(:operation_completed_with_failed_request_v1,
+            operation_type: "saptuneapplysolution@v1",
+            error: error
+          )
+
+        assert %{
+                 correlation_id: operation_id,
+                 operation_id: operation_id,
+                 resource_id: group_id,
+                 operation: :saptune_solution_apply,
+                 result: result,
+                 error: error,
+                 reason: mapped_error
+               } ==
+                 QueueEventParser.get_activity_metadata(:operation_completed, %{
+                   queue_event: operation_completed
+                 })
+      end
+    end
   end
 
   describe "checks customization" do
@@ -189,9 +242,12 @@ defmodule Trento.ActivityLog.QueueEventParserTest do
           group_id: group_id,
           target_type: target_type,
           custom_values: [
-            %{name: "value_1", value: {:string_value, "string_value"}},
-            %{name: "value_2", value: {:int_value, 1}},
-            %{name: "value_3", value: {:bool_value, true}}
+            %CheckCustomValue{
+              name: "value_1",
+              value: {:string_value, "string_value"}
+            },
+            %CheckCustomValue{name: "value_2", value: {:int_value, 1}},
+            %CheckCustomValue{name: "value_3", value: {:bool_value, true}}
           ]
         )
 

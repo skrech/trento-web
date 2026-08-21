@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useEffect, useState } from 'react';
 import {
   Chart as ChartJS,
@@ -13,6 +16,7 @@ import ZoomPlugin from 'chartjs-plugin-zoom';
 import classNames from 'classnames';
 import 'chartjs-adapter-date-fns';
 import { Line } from 'react-chartjs-2';
+import { formatDateTime, formatTimeOnly } from '@lib/timezones';
 
 const AVAILABLE_COLORS = [
   {
@@ -61,6 +65,7 @@ function TimeSeriesLineChart({
   onIntervalChange,
   start,
   title,
+  timezone,
   yAxisMaxValue,
   yAxisLabelFormatter = (value) => value,
   yAxisScaleType = 'linear',
@@ -137,6 +142,9 @@ function TimeSeriesLineChart({
         autoSkip: true,
         autoSkipPadding: 50,
         maxRotation: 0,
+        callback: (value) => {
+          formatTimeOnly(new Date(value), timezone);
+        },
       },
       time: {
         displayFormats: {
@@ -166,6 +174,13 @@ function TimeSeriesLineChart({
         bodyAlign: 'center',
         footerAlign: 'center',
         displayColors: 'false',
+        callbacks: {
+          title: (context) => {
+            return context.length
+              ? formatDateTime(new Date(context[0].parsed.x), timezone)
+              : '';
+          },
+        },
       },
       legend: {
         position: 'bottom',

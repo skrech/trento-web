@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule TrentoWeb.PageController do
   use TrentoWeb, :controller
 
@@ -13,6 +16,7 @@ defmodule TrentoWeb.PageController do
     installation_id = Settings.get_installation_id()
     analytics_enabled = Application.fetch_env!(:trento, :analytics)[:enabled]
     operations_enabled = Application.fetch_env!(:trento, :operations_enabled)
+    ai_enabled = Trento.AI.enabled?()
 
     {sso_enabled, callback_url, login_url, enrollment_url} = sso_details(conn)
 
@@ -28,6 +32,8 @@ defmodule TrentoWeb.PageController do
       sso_callback_url: callback_url,
       sso_enrollment_url: enrollment_url,
       operations_enabled: operations_enabled,
+      ai_enabled: ai_enabled,
+      ai_providers: get_normalized_ai_providers(),
       version: @version,
       layout: false
     )
@@ -76,5 +82,12 @@ defmodule TrentoWeb.PageController do
     enrollment_url = ~p"/api/session/#{enrollment_provider}/callback"
 
     {true, callback_url, login_url, enrollment_url}
+  end
+
+  defp get_normalized_ai_providers do
+    Trento.AI.ApplicationConfigLoader.load()
+    |> Keyword.get(:providers, [])
+    |> Enum.map(fn {provider, config} -> {provider, Keyword.get(config, :models, [])} end)
+    |> Enum.into(%{})
   end
 end

@@ -1,13 +1,11 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 // safe to disable phoenix stuff
 // eslint-disable-next-line
 import { Socket } from 'phoenix';
 import { logMessage, logError } from '@lib/log';
-import {
-  getAccessTokenFromStore,
-  getRefreshTokenFromStore,
-  refreshAccessToken,
-  storeAccessToken,
-} from '@lib/auth';
+import { getAccessTokenFromStore, refreshAndStoreAccessToken } from '@lib/auth';
 
 export const joinChannel = (channel) => {
   channel
@@ -17,26 +15,19 @@ export const joinChannel = (channel) => {
     .receive('timeout', () => logMessage('Networking issue. Still waiting...'));
 };
 
-const refreshAuthTokenForSocket = async () => {
-  const refreshToken = getRefreshTokenFromStore();
-  if (!refreshToken) {
-    logError(
-      'could not refresh the access token for websockets, refresh token not found'
-    );
-    throw new Error('could not refresh access token for websocket connection');
-  }
-
-  const {
-    data: { access_token: accessToken },
-  } = await refreshAccessToken(refreshToken);
-  storeAccessToken(accessToken);
-};
-
 const getWebsocketParams = () => ({
   access_token: getAccessTokenFromStore(),
 });
 
+// Singleton socket instance
+let socketInstance = null;
+
 export const initSocketConnection = () => {
+  // Return existing socket if already initialized
+  if (socketInstance) {
+    return socketInstance;
+  }
+
   const socket = new Socket('/socket', {
     params: () => getWebsocketParams(),
   });
@@ -44,9 +35,15 @@ export const initSocketConnection = () => {
     logMessage(
       'socket error. trying to refresh the access token before reconnecting'
     );
-    await refreshAuthTokenForSocket();
+    await refreshAndStoreAccessToken();
   });
   socket.connect();
 
+  // Store singleton instance
+  socketInstance = socket;
+
   return socket;
 };
+
+// Get existing socket instance (returns null if not initialized)
+export const getSocketInstance = () => socketInstance;

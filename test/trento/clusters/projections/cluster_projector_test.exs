@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Clusters.Projections.ClusterProjectorTest do
   use ExUnit.Case
   use Trento.DataCase
@@ -8,6 +11,8 @@ defmodule Trento.Clusters.Projections.ClusterProjectorTest do
   import Trento.Factory
 
   alias Trento.Clusters.Events.{
+    ClusterDataMarkedInSync,
+    ClusterDataMarkedStale,
     ClusterDeregistered,
     ClusterDetailsUpdated,
     ClusterHealthChanged,
@@ -82,7 +87,7 @@ defmodule Trento.Clusters.Projections.ClusterProjectorTest do
             }
           ],
           sbd_devices: [
-            %{device: "/dev/vdc", status: "healthy"}
+            %{device: "/dev/vdc", status: :healthy}
           ],
           secondary_sync_state: "SOK",
           sr_health_state: "4",
@@ -109,9 +114,12 @@ defmodule Trento.Clusters.Projections.ClusterProjectorTest do
         selected_checks: [],
         state: :S_IDLE,
         type: :hana_scale_up
-      },
+      } = message,
       1000
     )
+
+    # Check message can be properly encoded to json
+    assert {:ok, _} = Jason.encode(message)
   end
 
   test "should update the cluster details when ClusterDetailsUpdated is received" do
@@ -172,7 +180,7 @@ defmodule Trento.Clusters.Projections.ClusterProjectorTest do
             }
           ],
           sbd_devices: [
-            %{device: "/dev/vdc", status: "healthy"}
+            %{device: "/dev/vdc", status: :healthy}
           ],
           secondary_sync_state: "SOK",
           sr_health_state: "4",
@@ -269,6 +277,55 @@ defmodule Trento.Clusters.Projections.ClusterProjectorTest do
     assert_broadcast(
       "cluster_health_changed",
       %{cluster_id: ^cluster_id, name: ^name, health: ^health},
+      1000
+    )
+  end
+
+  test "should mark cluster data as stale when ClusterDataMarkedStale event is received" do
+    %{id: cluster_id} = insert(:cluster, stale_at: nil)
+
+    stale_at = DateTime.utc_now()
+
+    event = %ClusterDataMarkedStale{
+      cluster_id: cluster_id,
+      stale_at: stale_at
+    }
+
+    ProjectorTestHelper.project(ClusterProjector, event, "cluster_projector")
+
+    cluster = Repo.get!(ClusterReadModel, cluster_id)
+
+    assert cluster.stale_at == stale_at
+
+    assert_broadcast(
+      "cluster_stale_changed",
+      %{
+        id: ^cluster_id,
+        stale_at: ^stale_at
+      },
+      1000
+    )
+  end
+
+  test "should mark cluster data as fresh when ClusterDataMarkedInSync event is received" do
+    %{id: cluster_id} = insert(:cluster, stale_at: DateTime.utc_now())
+
+    event = %ClusterDataMarkedInSync{
+      cluster_id: cluster_id
+    }
+
+    ProjectorTestHelper.project(ClusterProjector, event, "cluster_projector")
+
+    cluster = Repo.get!(ClusterReadModel, cluster_id)
+
+    assert cluster.stale_at == nil
+
+    assert_broadcast(
+      "cluster_stale_changed",
+      %{
+        id: ^cluster_id,
+        stale_at: nil
+      },
       1000
     )
   end

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -273,49 +276,49 @@ describe.each([
     },
     {
       state: 'enable',
-      operation: 'Stop cluster in node',
+      operation: 'Set node offline in cluster',
       status: 'Online',
       hostStatus: 'online',
     },
     {
       state: 'enable',
-      operation: 'Stop cluster in node',
+      operation: 'Set node offline in cluster',
       status: 'Maintenance',
       hostStatus: 'online',
     },
     {
       state: 'disable',
-      operation: 'Stop cluster in node',
+      operation: 'Set node offline in cluster',
       status: 'Offline',
       hostStatus: 'offline',
     },
     {
       state: 'disable',
-      operation: 'Stop cluster in node',
+      operation: 'Set node offline in cluster',
       status: 'Offline',
       hostStatus: 'online',
     },
     {
       state: 'disable',
-      operation: 'Start cluster in node',
+      operation: 'Set node online in cluster',
       status: 'Online',
       hostStatus: 'online',
     },
     {
       state: 'disable',
-      operation: 'Start cluster in node',
+      operation: 'Set node online in cluster',
       status: 'Maintenance',
       hostStatus: 'online',
     },
     {
       state: 'enable',
-      operation: 'Start cluster in node',
+      operation: 'Set node online in cluster',
       status: 'Offline',
       hostStatus: 'offline',
     },
     {
       state: 'enable',
-      operation: 'Start cluster in node',
+      operation: 'Set node online in cluster',
       status: 'Offline',
       hostStatus: 'online',
     },

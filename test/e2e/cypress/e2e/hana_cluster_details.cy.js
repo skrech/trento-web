@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import * as hanaClusterDetailsPage from '../pageObject/hana_cluster_details_po';
 
 context('HANA cluster details', () => {
@@ -5,7 +8,7 @@ context('HANA cluster details', () => {
 
   describe('HANA cluster details should be consistent with the state of the cluster', () => {
     beforeEach(() => {
-      hanaClusterDetailsPage.interceptCatalogRequest();
+      hanaClusterDetailsPage.interceptCatalogRequestMocked();
       hanaClusterDetailsPage.interceptLastExecutionRequestMocked();
       hanaClusterDetailsPage.visitAvailableHanaCluster();
       hanaClusterDetailsPage.waitForInitialEndpoints();
@@ -13,6 +16,10 @@ context('HANA cluster details', () => {
 
     it('should have expected cluster name in header', () => {
       hanaClusterDetailsPage.expectedClusterNameIsDisplayedInHeader();
+    });
+
+    it('should have expected cluster health in header', () => {
+      hanaClusterDetailsPage.expectedClusterHealthIsDisplayedInHeader();
     });
 
     it('should have expected provider', () => {
@@ -100,7 +107,7 @@ context('HANA cluster details', () => {
   describe('Cluster sites should have the expected hosts', () => {
     beforeEach(() => {
       hanaClusterDetailsPage.interceptLastExecutionRequestMocked();
-      hanaClusterDetailsPage.interceptCatalogRequest();
+      hanaClusterDetailsPage.interceptCatalogRequestMocked();
       hanaClusterDetailsPage.visitAvailableHanaCluster();
       hanaClusterDetailsPage.waitForInitialEndpoints();
       hanaClusterDetailsPage.validateAvailableHanaClusterUrl();
@@ -142,13 +149,24 @@ context('HANA cluster details', () => {
   describe('Cluster SBD should have the expected devices with the correct status', () => {
     beforeEach(() => {
       hanaClusterDetailsPage.interceptLastExecutionRequestMocked();
-      hanaClusterDetailsPage.interceptCatalogRequest();
+      hanaClusterDetailsPage.interceptCatalogRequestMocked();
       hanaClusterDetailsPage.visitAvailableHanaCluster();
       hanaClusterDetailsPage.waitForInitialEndpoints();
     });
 
+    after(() => hanaClusterDetailsPage.loadScenario('cluster-sbd-healthy'));
+
     it('should have SBD expected device name & status', () => {
       hanaClusterDetailsPage.sbdClusterHasExpectedNameAndStatus();
+    });
+
+    it('should have SBD with unhealthy status after change', () => {
+      hanaClusterDetailsPage.loadScenario('cluster-sbd-unhealthy');
+      hanaClusterDetailsPage.criticalClusterHealthIsDisplayedInHeader();
+      hanaClusterDetailsPage.sbdClusterHasExpectedNameAndStatus([
+        {},
+        { status: 'Unhealthy' },
+      ]);
     });
   });
 
@@ -301,10 +319,16 @@ context('HANA cluster details', () => {
     const CHECK_PACEMAKER = 'Pacemaker';
     const CHECK_SBD = 'SBD';
 
+    before(function () {
+      if (Cypress.expose('wanda_mode') !== 'demo') this.skip();
+    });
+
     beforeEach(() => hanaClusterDetailsPage.visitAvailableHanaCluster());
 
     it('should include the checks catalog in the checks results once enabled', () => {
+      hanaClusterDetailsPage.interceptGetChecks();
       hanaClusterDetailsPage.clickCheckSelectionButton();
+      hanaClusterDetailsPage.waitForGetChecksEndpoint();
       hanaClusterDetailsPage.expectedCheckIsDisplayed(CHECK_COROSYNC);
       hanaClusterDetailsPage.expectedCheckIsDisplayed(CHECK_MISCELLANEOUS);
       hanaClusterDetailsPage.expectedCheckIsDisplayed(
@@ -323,10 +347,11 @@ context('HANA cluster details', () => {
   });
 
   describe('Cluster with unknown provider', () => {
-    before(() => {
-      hanaClusterDetailsPage.loadScenario('cluster-unknown-provider');
-      hanaClusterDetailsPage.visitAvailableHanaCluster();
-    });
+    before(() =>
+      hanaClusterDetailsPage.loadScenario('cluster-unknown-provider')
+    );
+
+    beforeEach(() => hanaClusterDetailsPage.visitAvailableHanaCluster());
 
     it('should show a warning message in the check selection view', () => {
       hanaClusterDetailsPage.clickCheckSelectionButton();
@@ -337,8 +362,7 @@ context('HANA cluster details', () => {
       );
     });
 
-    it(`should show a warning message in the checks results view`, () => {
-      hanaClusterDetailsPage.visitAvailableHanaCluster();
+    it('should show a warning message in the checks results view', () => {
       hanaClusterDetailsPage.clickCheckResultsButton();
       const expectedWarningMessage =
         'The following results are valid for on-premise bare metal platforms.If you are running your HANA cluster on a different platform, please use results with caution';
@@ -355,7 +379,9 @@ context('HANA cluster details', () => {
     });
 
     it('should show the default check catalog with corosync token timeout default value', () => {
+      hanaClusterDetailsPage.interceptGetChecks();
       hanaClusterDetailsPage.clickCheckSelectionButton();
+      hanaClusterDetailsPage.waitForGetChecksEndpoint();
       hanaClusterDetailsPage.clickCorosyncCheckCategory();
       hanaClusterDetailsPage.clickCorosyncTokenTimeoutCheckSettings();
       hanaClusterDetailsPage.checkInputValueIsTheExpected(5000);
@@ -381,7 +407,9 @@ context('HANA cluster details', () => {
     });
 
     it('should show the default check catalog with corosync token timeout default value', () => {
+      hanaClusterDetailsPage.interceptGetChecks();
       hanaClusterDetailsPage.clickCheckSelectionButton();
+      hanaClusterDetailsPage.waitForGetChecksEndpoint();
       hanaClusterDetailsPage.clickCorosyncCheckCategory();
       hanaClusterDetailsPage.clickCorosyncTokenTimeoutCheckSettings();
       hanaClusterDetailsPage.checkInputValueIsTheExpected(5000);
@@ -399,7 +427,7 @@ context('HANA cluster details', () => {
       hanaClusterDetailsPage.linkToDeregisteredHostIsNotAvailable();
     });
 
-    it(`should show host again with a working link after restoring it`, () => {
+    it('should show host again with a working link after restoring it', () => {
       hanaClusterDetailsPage.apiRestoreWdfHost();
       hanaClusterDetailsPage.linkToDeregisteredHostIsAvailable();
     });
@@ -413,6 +441,28 @@ context('HANA cluster details', () => {
     it('should show resources table content', () => {
       hanaClusterDetailsPage.expandGroupedResources();
       hanaClusterDetailsPage.expectedResourcesDisplayed();
+    });
+  });
+
+  describe('Stale data', () => {
+    before(() => {
+      hanaClusterDetailsPage.startHanaClusterAgentsHeartbeat();
+      hanaClusterDetailsPage.visitAvailableHanaCluster();
+    });
+
+    after(() => hanaClusterDetailsPage.stopAgentsHeartbeat());
+
+    it('should mark cluster data as stale when an agent composing the cluster stops reporting', () => {
+      hanaClusterDetailsPage.stopHanaClusterAgentHeartbeat();
+      hanaClusterDetailsPage.hanaClusterHealthIsMarkedAsStale();
+      hanaClusterDetailsPage.hanaClusterStaleBannerIsDisplayed();
+    });
+
+    it('should mark cluster data as sync when the agent starts reporting data again', () => {
+      hanaClusterDetailsPage.startHanaClusterAgentHeartbeat();
+      hanaClusterDetailsPage.apiRestoreWdfHost();
+      hanaClusterDetailsPage.hanaClusterHealthIsMarkedInSync();
+      hanaClusterDetailsPage.hanaClusterStaleBannerIsNotDisplayed();
     });
   });
 

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 export * from './base_po';
 import * as basePage from './base_po';
 
@@ -6,14 +9,15 @@ const activityLogEndpoint = '/api/v1/activity_log*';
 
 //Selectors
 const filteringElements = 'div[class="relative"]';
-const refreshRateFilter = 'button[class*="refresh-rate"] ';
+const refreshRateLabel = '[aria-label="refresh-rate"]';
+const refreshRateFilter = basePage.getSelectControlValue(refreshRateLabel);
 const metadataSearchInput = 'input[name="metadata-search"]';
 
-const filterOlderThanButton = 'button:contains("Filter older than...")';
-const filterOlderThanInputField = `${filterOlderThanButton} + div input`;
+const filterFromDateButton = 'button:contains("Filter From date...")';
+const filterFromDateInputField = `${filterFromDateButton} + div input`;
 
-const filterNewerThanButton = 'button:contains("Filter newer than...")';
-const filterNewerThanInputField = `${filterNewerThanButton} + div input`;
+const filterToDateButton = 'button:contains("Filter To date...")';
+const filterToDateInputField = `${filterToDateButton} + div input`;
 
 const filterTypeButton = 'button[data-testid="filter-Type"]';
 
@@ -26,11 +30,10 @@ const previousPageButton = '[aria-label="prev-page"]';
 const firstPageButton = '[aria-label="first-page"]';
 const lastPageButton = '[aria-label="last-page"]';
 
-const selectPaginationButton =
-  'div[class*="flex justify-between"] button[aria-haspopup="listbox"]';
-
-const autoRefreshIntervalButton = 'button[class*="refresh-rate"]';
-const availableRefreshRates = 'button[class*="refresh-rate"] + div div';
+const selectPaginationLabel = '[aria-label="per-page"]';
+const selectPaginationButton = basePage.getSelectControlValue(
+  selectPaginationLabel
+);
 
 //Test data
 const expectedRefreshRates = ['Off', '5s', '10s', '30s', '1m', '5m', '30m'];
@@ -40,13 +43,12 @@ export const visit = (queryString = '') =>
 
 // Network Interception
 
-export const interceptActivityLogEndpoint = () => {
-  return cy
+export const interceptActivityLogEndpoint = () =>
+  cy
     .intercept({
       url: activityLogEndpoint,
     })
     .as(activityLogEndpointAlias);
-};
 
 export const spyActivityLogRequest = () => {
   cy.clock();
@@ -65,14 +67,13 @@ export const clickFilterTypeButton = () =>
 
 export const clickAutoRefreshRateButton = () => {
   basePage.clickOutside();
-  cy.get(autoRefreshIntervalButton).click();
+  return cy.get(refreshRateFilter).click();
 };
 
-export const clickFilterNewerThanButton = () =>
-  cy.get(filterNewerThanButton).click();
+export const clickFilterFromDateButton = () =>
+  cy.get(filterFromDateButton).click();
 
-export const clickFilterOlderThanButton = () =>
-  cy.get(filterOlderThanButton).click();
+export const clickFilterToDateButton = () => cy.get(filterToDateButton).click();
 
 export const clickRefreshButton = () =>
   cy.get(refreshButton).click({ force: true });
@@ -89,11 +90,11 @@ export const clickFirstPageButton = () => cy.get(firstPageButton).click();
 
 export const clickLastPageButton = () => cy.get(lastPageButton).click();
 
-export const typeFilterNewerThanInputField = (filterValue) =>
-  cy.get(filterNewerThanInputField).type(filterValue);
+export const typeFilterFromDateInputField = (filterValue) =>
+  cy.get(filterFromDateInputField).type(filterValue);
 
-export const typeFilterOlderThanInputField = (filterValue) =>
-  cy.get(filterOlderThanInputField).type(filterValue);
+export const typeFilterToDateInputField = (filterValue) =>
+  cy.get(filterToDateInputField).type(filterValue);
 
 export const selectFilterTypeOption = (option) =>
   cy.get(`span:contains("${option}")`).click();
@@ -103,7 +104,10 @@ export const typeMetadataFilter = (searchValue) =>
 
 export const selectPagination = (amountOfItems) => {
   cy.get(selectPaginationButton).click();
-  return cy.get(`span:contains("${amountOfItems}")`).first().click();
+  return cy
+    .get(`${basePage.selectOptions}:contains("${amountOfItems}")`)
+    .first()
+    .click();
 };
 
 export const selectRefreshRate = (refreshRate) => {
@@ -120,23 +124,22 @@ export const filterTypeOptionsAreDisplayed = () =>
   cy.get(`${filterTypeButton} + div`).should('be.visible');
 
 export const autoRefreshIntervalButtonHasTheExpectedValue = (refreshRate) =>
-  cy.get(autoRefreshIntervalButton).should('have.text', refreshRate);
+  cy.get(refreshRateFilter).should('have.text', refreshRate);
 
 export const autoRefreshButtonIsEnabled = () =>
-  cy.get(autoRefreshIntervalButton).should('be.enabled');
+  cy.get(refreshRateLabel).should('be.enabled');
 
 export const autoRefreshIntervalButtonIsDisabled = () =>
-  cy.get(autoRefreshIntervalButton).should('be.disabled');
+  cy.get(refreshRateLabel).should('be.disabled');
 
-export const filteredActionsAreTheExpectedOnes = (filteredActions) => {
-  return cy
+export const filteredActionsAreTheExpectedOnes = (filteredActions) =>
+  cy
     .get(filteringElements)
     .eq(1)
     .find('span span')
     .should('have.text', filteredActions);
-};
 
-export const filterNewerThanHasTheExpectedValue = (filterValue) => {
+export const filterFromDateHasTheExpectedValue = (filterValue) => {
   let expectedValue;
   _isUriComponentDate(filterValue)
     ? (expectedValue = formatEncodedDate(filterValue))
@@ -149,7 +152,7 @@ export const filterNewerThanHasTheExpectedValue = (filterValue) => {
     .should('have.text', expectedValue);
 };
 
-export const filterOlderThanHasTheExpectedValue = (filterValue) => {
+export const filterToDateHasTheExpectedValue = (filterValue) => {
   let expectedValue;
   _isUriComponentDate(filterValue)
     ? (expectedValue = formatEncodedDate(filterValue))
@@ -161,11 +164,11 @@ export const filterOlderThanHasTheExpectedValue = (filterValue) => {
     .should('have.text', expectedValue);
 };
 
-export const filterNewerThanHasNothingSelected = () =>
-  filterNewerThanHasTheExpectedValue('Filter newer than...');
+export const filterFromDateHasNothingSelected = () =>
+  filterFromDateHasTheExpectedValue('Filter From date...');
 
-export const filterOlderThanHasNothingSelected = () =>
-  filterOlderThanHasTheExpectedValue('Filter older than...');
+export const filterToDateHasNothingSelected = () =>
+  filterToDateHasTheExpectedValue('Filter To date...');
 
 export const filterTypeHasNothingSelected = () =>
   filteredActionsAreTheExpectedOnes('Filter Type...');
@@ -173,12 +176,11 @@ export const filterTypeHasNothingSelected = () =>
 export const refreshRateFilterHasTheExpectedValue = (refreshRate) =>
   cy.get(refreshRateFilter).should('have.text', refreshRate);
 
-export const metadataSearchHasTheExpectedPlaceholder = () => {
-  return cy
+export const metadataSearchHasTheExpectedPlaceholder = () =>
+  cy
     .get(metadataSearchInput)
     .should('have.attr', 'placeholder', 'Filter by metadata')
     .should('be.visible');
-};
 
 export const metadataSearchHasTheExpectedValue = (searchValue) =>
   cy.get(metadataSearchInput).should('have.value', searchValue);
@@ -192,12 +194,8 @@ export const activityLogEndpointIsCalledOnlyOnce = () => {
   return cy.get(`@${activityLogEndpointAlias}.all`).should('have.length', 1);
 };
 
-export const activityLogRequestHasExpectedStatusCode = (statusCode) => {
-  return basePage.validateResponseStatusCode(
-    activityLogEndpointAlias,
-    statusCode
-  );
-};
+export const activityLogRequestHasExpectedStatusCode = (statusCode) =>
+  basePage.validateResponseStatusCode(activityLogEndpointAlias, statusCode);
 
 export const paginationPropertiesAreTheExpected = (response) => {
   expect(response.body).to.have.property('pagination');
@@ -207,31 +205,28 @@ export const paginationPropertiesAreTheExpected = (response) => {
   expect(response.body.pagination).to.have.property('first', 20);
 };
 
-export const validateResponsePagination = (amountOfItems) => {
-  return basePage
+export const validateResponsePagination = (amountOfItems) =>
+  basePage
     .waitForRequest(activityLogEndpointAlias)
     .its('response.body.pagination.first')
     .should('eq', amountOfItems);
-};
 
-export const responseMatchesFirstPageContent = (expectedResponse) => {
+export const responseMatchesFirstPageContent = (expectedResponse) =>
   waitForActivityLogRequest().then(({ response }) => {
     expect(response.body.pagination).to.have.property('last', 20);
     expectedResponse.body.data.forEach((element, i) => {
       expect(element.id).to.eq(response.body.data[i].id);
     });
   });
-};
 
-export const apiCallDoesNotContainRefreshRate = (refreshRate) => {
-  return waitForActivityLogRequest().then(({ response }) => {
+export const apiCallDoesNotContainRefreshRate = (refreshRate) =>
+  waitForActivityLogRequest().then(({ response }) => {
     expect(response.url).to.not.contain(refreshRate);
   });
-};
 
 export const expectedRefreshRatesAreAvailable = () => {
   clickAutoRefreshRateButton();
-  cy.get(availableRefreshRates).each(($element, index) =>
+  cy.get(basePage.selectOptions).each(($element, index) =>
     expect(expectedRefreshRates[index]).to.eq($element.text())
   );
   return clickAutoRefreshRateButton();
@@ -245,15 +240,13 @@ export const expectedAggregateAmountOfRequests = (amount) =>
 export const formatEncodedDate = (encodedDate) => {
   const decodedDate = decodeURIComponent(encodedDate);
   const date = new Date(decodedDate);
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
   const day = String(date.getUTCDate()).padStart(2, '0');
+  const month = date.toLocaleString('en', { month: 'short', timeZone: 'UTC' }); // Assuming UTC
   const year = date.getUTCFullYear();
-  let hours = date.getUTCHours();
+  const hours = String(date.getUTCHours()).padStart(2, '0');
   const minutes = String(date.getUTCMinutes()).padStart(2, '0');
   const seconds = String(date.getUTCSeconds()).padStart(2, '0');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12 || 12;
-  return `${month}/${day}/${year} ${hours}:${minutes}:${seconds} ${ampm}`;
+  return `${day} ${month} ${year}, ${hours}:${minutes}:${seconds}`;
 };
 
 const _isUriComponentDate = (encodedDate) => {

@@ -1,6 +1,7 @@
-import { get } from 'lodash';
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
 
-import { SAPTUNE_SOLUTION_OPERATION_FORBIDDEN_MSG } from './ForbiddenMessages';
+import { get } from 'lodash';
 
 export const HOST_OPERATION = 'host';
 export const CLUSTER_OPERATION = 'cluster';
@@ -39,8 +40,8 @@ export const OPERATION_NOT_ALLOWED_DATABASE =
 const OPERATION_LABELS = {
   [SAPTUNE_SOLUTION_APPLY]: 'Apply Saptune solution',
   [SAPTUNE_SOLUTION_CHANGE]: 'Change Saptune solution',
-  [CLUSTER_HOST_START]: 'Start cluster host',
-  [CLUSTER_HOST_STOP]: 'Stop cluster host',
+  [CLUSTER_HOST_START]: 'Set node online in cluster',
+  [CLUSTER_HOST_STOP]: 'Set node offline in cluster',
   [CLUSTER_MAINTENANCE_CHANGE]: 'Cluster maintenance change',
   [CLUSTER_RESOURCE_REFRESH]: 'Refresh cluster resources',
   [SAP_INSTANCE_START]: 'SAP instance start',
@@ -55,8 +56,8 @@ const OPERATION_LABELS = {
 };
 
 const OPERATION_TITLES = {
-  [CLUSTER_HOST_START]: 'Start cluster host',
-  [CLUSTER_HOST_STOP]: 'Stop cluster host',
+  [CLUSTER_HOST_START]: 'Set node online in cluster',
+  [CLUSTER_HOST_STOP]: 'Set node offline in cluster',
   [CLUSTER_MAINTENANCE_CHANGE]: 'Maintenance change',
   [CLUSTER_RESOURCE_REFRESH]: 'Refresh resources',
   [DATABASE_START]: 'Start database',
@@ -108,10 +109,7 @@ const OPERATION_RESOURCE_TYPES = {
   [HOST_REBOOT]: HOST_OPERATION,
 };
 
-const OPERATION_FORBIDDEN_MESSAGES = {
-  [SAPTUNE_SOLUTION_APPLY]: SAPTUNE_SOLUTION_OPERATION_FORBIDDEN_MSG,
-  [SAPTUNE_SOLUTION_CHANGE]: SAPTUNE_SOLUTION_OPERATION_FORBIDDEN_MSG,
-};
+export const OPERATION_REQUEST_FAILED = 'REQUEST_FAILED';
 
 export const getOperationLabel = (operation) =>
   get(OPERATION_LABELS, operation, 'unknown');
@@ -124,9 +122,6 @@ export const getOperationInternalName = (operation) =>
 
 export const getOperationResourceType = (operation) =>
   get(OPERATION_RESOURCE_TYPES, operation, 'unknown');
-
-export const getOperationForbiddenMessage = (operation) =>
-  get(OPERATION_FORBIDDEN_MESSAGES, operation, null);
 
 export const operationSucceeded = (result) =>
   ['UPDATED', 'NOT_UPDATED'].includes(result);

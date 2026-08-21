@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import { faker } from '@faker-js/faker';
 import MockAdapter from 'axios-mock-adapter';
 
@@ -121,7 +124,7 @@ describe('Software Updates saga', () => {
         errors: [
           {
             title: 'Not Found',
-            detail: 'SUSE Manager settings not configured.',
+            detail: 'SUSE Multi-Linux Manager settings not configured.',
           },
         ],
       };
@@ -176,7 +179,7 @@ describe('Software Updates saga', () => {
         errors: [
           {
             title: 'Not Found',
-            detail: 'SUSE Manager settings not configured.',
+            detail: 'SUSE Multi-Linux Manager settings not configured.',
           },
         ],
       };

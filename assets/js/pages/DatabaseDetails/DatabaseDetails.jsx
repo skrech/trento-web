@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useEffect } from 'react';
 import { useParams } from 'react-router';
 import { useSelector, useDispatch } from 'react-redux';
@@ -31,7 +34,7 @@ function DatabaseDetails() {
   const database = useSelector((state) =>
     getEnrichedDatabaseDetails(state, id)
   );
-  const { abilities } = useSelector(getUserProfile);
+  const { abilities, timezone } = useSelector(getUserProfile);
   const dispatch = useDispatch();
 
   const runningOperations = useSelector(getRunningOperationsList);
@@ -52,6 +55,7 @@ function DatabaseDetails() {
         type={DATABASE_TYPE}
         system={database}
         userAbilities={abilities}
+        userTimezone={timezone}
         cleanUpPermittedFor={['cleanup:database_instance']}
         operationsEnabled={operationsEnabled}
         runningOperations={runningOperations}

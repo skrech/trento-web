@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Infrastructure.Commanded.EventHandlers.StreamRollUpEventHandler do
   @moduledoc """
   This module is responsible for triggering the roll-up of an aggregate.
@@ -31,18 +34,19 @@ defmodule Trento.Infrastructure.Commanded.EventHandlers.StreamRollUpEventHandler
     Trento.Clusters.Events.ChecksSelected,
     Trento.Clusters.Events.ClusterChecksHealthChanged,
     Trento.Clusters.Events.ClusterDetailsUpdated,
-    Trento.Clusters.Events.ClusterDiscoveredHealthChanged,
+    Trento.Clusters.Events.ClusterDitributedHealthChanged,
     Trento.Clusters.Events.ClusterHealthChanged,
     Trento.Clusters.Events.ClusterRegistered,
+    Trento.Clusters.Events.ClusterReplicationHealthChanged,
     Trento.Clusters.Events.HostAddedToCluster
   ]
 
   @database_events [
     Trento.Databases.Events.DatabaseHealthChanged,
-    Trento.Databases.Events.DatabaseInstanceHealthChanged,
     Trento.Databases.Events.DatabaseInstanceMarkedAbsent,
     Trento.Databases.Events.DatabaseInstanceMarkedPresent,
     Trento.Databases.Events.DatabaseInstanceRegistered,
+    Trento.Databases.Events.DatabaseInstanceStatusChanged,
     Trento.Databases.Events.DatabaseInstanceSystemReplicationChanged,
     Trento.Databases.Events.DatabaseRegistered,
     Trento.Databases.Events.DatabaseRestored
@@ -64,7 +68,7 @@ defmodule Trento.Infrastructure.Commanded.EventHandlers.StreamRollUpEventHandler
   ]
 
   @sap_system_events [
-    Trento.SapSystems.Events.ApplicationInstanceHealthChanged,
+    Trento.SapSystems.Events.ApplicationInstanceStatusChanged,
     Trento.SapSystems.Events.ApplicationInstanceRegistered,
     Trento.SapSystems.Events.ApplicationInstanceMarkedAbsent,
     Trento.SapSystems.Events.ApplicationInstanceMarkedPresent,

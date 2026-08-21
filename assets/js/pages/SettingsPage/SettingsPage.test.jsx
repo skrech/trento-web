@@ -1,6 +1,8 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 
-import { format } from 'date-fns';
 import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
@@ -12,6 +14,7 @@ import {
 } from '@lib/test-utils';
 import { softwareUpdatesSettingsFactory } from '@lib/test-utils/factories/softwareUpdatesSettings';
 import { networkClient } from '@lib/network';
+import { formatDateOnly } from '@lib/timezones';
 import MockAdapter from 'axios-mock-adapter';
 
 import SettingsPage from './SettingsPage';
@@ -67,6 +70,32 @@ describe('Settings Page', () => {
         screen.getByRole('button', { name: 'copy to clipboard' })
       ).toBeVisible();
     });
+
+    it('should render api key expiration date according to user timezone', async () => {
+      const futureDate = new Date(
+        Date.now() + 365 * 24 * 60 * 60 * 1000
+      ).toISOString();
+
+      const [StatefulSettings] = withState(<SettingsPage />, {
+        ...defaultInitialState,
+        user: {
+          abilities: defaultInitialStateBase.user.abilities,
+          timezone: 'Pacific/Kiritimati',
+        },
+      });
+
+      axiosMock.onGet('/api/v1/settings/api_key').reply(200, {
+        expire_at: futureDate,
+        generated_api_key: 'api_key_with_expiration',
+      });
+
+      await act(async () => {
+        renderWithRouter(StatefulSettings);
+      });
+
+      const expectedDate = formatDateOnly(futureDate, 'Pacific/Kiritimati');
+      expect(screen.getByText(`Key will expire ${expectedDate}`)).toBeVisible();
+    });
   });
 
   describe('Software Updates Section', () => {
@@ -87,11 +116,11 @@ describe('Settings Page', () => {
       });
 
       expect(
-        screen.getByText('Loading SUSE Manager Settings...')
+        screen.getByText('Loading SUSE Multi-Linux Manager Settings...')
       ).toBeVisible();
     });
 
-    it('should render an empty SUSE Manager Config Section', async () => {
+    it('should render an empty SUSE Multi-Linux Manager Config Section', async () => {
       const [StatefulSettings] = withState(<SettingsPage />, {
         ...defaultInitialState,
       });
@@ -102,22 +131,22 @@ describe('Settings Page', () => {
         renderWithRouter(StatefulSettings);
       });
 
-      expect(screen.getByText('SUSE Manager URL')).toBeVisible();
+      expect(screen.getByText('SUSE Multi-Linux Manager URL')).toBeVisible();
       expect(screen.getByText('https://')).toBeVisible();
 
       expect(screen.getByText('CA Certificate')).toBeVisible();
       expect(screen.getByText('-')).toBeVisible();
 
-      const sumaUsername = screen.getByLabelText('suma-username');
-      expect(sumaUsername).toBeVisible();
-      expect(sumaUsername).toHaveTextContent('.....');
+      const smlmUsername = screen.getByLabelText('smlm-username');
+      expect(smlmUsername).toBeVisible();
+      expect(smlmUsername).toHaveTextContent('.....');
 
-      const sumaPassword = screen.getByLabelText('suma-password');
-      expect(sumaPassword).toBeVisible();
-      expect(sumaPassword).toHaveTextContent('.....');
+      const smlmPassword = screen.getByLabelText('smlm-password');
+      expect(smlmPassword).toBeVisible();
+      expect(smlmPassword).toHaveTextContent('.....');
     });
 
-    it('should render SUSE Manager Config Section with configured settings', async () => {
+    it('should render SUSE Multi-Linux Manager Config Section with configured settings', async () => {
       const settings = softwareUpdatesSettingsFactory.build();
 
       const [StatefulSettings] = withState(<SettingsPage />, {
@@ -131,22 +160,22 @@ describe('Settings Page', () => {
       await act(async () => {
         renderWithRouter(StatefulSettings);
       });
-      expect(screen.getByText('SUSE Manager URL')).toBeVisible();
+      expect(screen.getByText('SUSE Multi-Linux Manager URL')).toBeVisible();
       expect(screen.getByText(url)).toBeVisible();
 
       expect(screen.getByText('CA Certificate')).toBeVisible();
       expect(screen.getByText('Certificate Uploaded')).toBeVisible();
-      expect(
-        screen.getByText(format(ca_uploaded_at, "'Uploaded:' dd MMM y"))
-      ).toBeVisible();
 
-      const sumaUsername = screen.getByLabelText('suma-username');
-      expect(sumaUsername).toBeVisible();
-      expect(sumaUsername).toHaveTextContent(username);
+      const expectedDate = formatDateOnly(ca_uploaded_at);
+      expect(screen.getByText(`Uploaded: ${expectedDate}`)).toBeVisible();
 
-      const sumaPassword = screen.getByLabelText('suma-password');
-      expect(sumaPassword).toBeVisible();
-      expect(sumaPassword).toHaveTextContent('•••••');
+      const smlmUsername = screen.getByLabelText('smlm-username');
+      expect(smlmUsername).toBeVisible();
+      expect(smlmUsername).toHaveTextContent(username);
+
+      const smlmPassword = screen.getByLabelText('smlm-password');
+      expect(smlmPassword).toBeVisible();
+      expect(smlmPassword).toHaveTextContent('•••••');
     });
   });
 

@@ -1,7 +1,9 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import 'intersection-observer';
 import '@testing-library/jest-dom';
 import { faker } from '@faker-js/faker';
 import { networkClient } from '@lib/network';
@@ -9,12 +11,14 @@ import MockAdapter from 'axios-mock-adapter';
 
 import { renderWithRouter } from '@lib/test-utils';
 import { TUNING_VALUES } from '@lib/test-utils/saptune';
+import { formatDateTime } from '@lib/timezones';
 import {
   hostFactory,
   saptuneStatusFactory,
   databaseInstanceFactory,
+  sapSystemApplicationInstanceFactory,
 } from '@lib/test-utils/factories';
-import { DATABASE_TYPE } from '@lib/model/sapSystems';
+import { APPLICATION_TYPE, DATABASE_TYPE } from '@lib/model/sapSystems';
 import {
   SAPTUNE_SOLUTION_APPLY,
   SAPTUNE_SOLUTION_CHANGE,
@@ -32,6 +36,64 @@ describe('HostDetails component', () => {
   beforeEach(() => {
     axiosMock.reset();
     axiosMock.onGet(/\/api\/v1\/charts.*/gm).reply(200, {});
+  });
+
+  describe('Header', () => {
+    it('should display host name and health', () => {
+      const { hostname, health } = hostFactory.build();
+
+      renderWithRouter(
+        <HostDetails
+          hostname={hostname}
+          health={health}
+          agentVersion="1.0.0"
+          userAbilities={userAbilities}
+        />
+      );
+
+      expect(
+        screen.getByRole('heading', {
+          name: `Host Details: ${hostname}`,
+        })
+      ).toBeVisible();
+      expect(screen.getByRole('img', { name: /host health/i })).toBeVisible();
+    });
+  });
+
+  describe('When stale', () => {
+    it('should render stale icon and warning banner', () => {
+      const timezone = 'Etc/UTC';
+      const { hostname, health, heartbeat, staleAt } = hostFactory.build({
+        heartbeat: 'critical',
+        staleAt: faker.date.past(),
+      });
+
+      renderWithRouter(
+        <HostDetails
+          hostname={hostname}
+          health={health}
+          heartbeat={heartbeat}
+          staleAt={staleAt}
+          agentVersion="1.0.0"
+          userAbilities={userAbilities}
+          timezone={timezone}
+        />
+      );
+
+      expect(
+        screen.getByRole('heading', {
+          name: `Host Details: ${hostname}`,
+        })
+      ).toBeVisible();
+      expect(screen.getByRole('img', { name: /host health/i })).toHaveAttribute(
+        'data-stale'
+      );
+      expect(
+        screen.getByRole('alert', {
+          name: /^The agent in this host is not responding/i,
+        })
+      ).toHaveTextContent(formatDateTime(staleAt, timezone));
+    });
   });
 
   describe('Checks execution', () => {
@@ -140,6 +202,85 @@ describe('HostDetails component', () => {
         );
 
         expect(screen.getByText('10.0.0.5, 10.0.0.6')).toBeInTheDocument();
+      });
+
+      it('should render last boot using provided timezone', () => {
+        renderWithRouter(
+          <HostDetails
+            agentVersion="2.0.0"
+            ipAddresses={['10.0.0.5']}
+            netmasks={[24]}
+            lastBootTimestamp="2024-01-10T23:30:00Z"
+            timezone="Pacific/Kiritimati"
+            userAbilities={userAbilities}
+          />
+        );
+
+        expect(screen.getByText('Last Boot').nextSibling.textContent).toBe(
+          '11 Jan 2024, 13:30:00'
+        );
+      });
+    });
+  });
+
+  describe('SLES subscriptions', () => {
+    it('should format SLES subscription dates using provided timezone prop', () => {
+      renderWithRouter(
+        <HostDetails
+          agentVersion="1.0.0"
+          userAbilities={userAbilities}
+          timezone="Pacific/Kiritimati"
+          slesSubscriptions={[
+            {
+              starts_at: '2024-01-10T23:30:00Z',
+              expires_at: '2024-01-11T23:30:00Z',
+              status: 'active',
+              subscription_id: 'sub-1',
+            },
+          ]}
+        />
+      );
+
+      expect(screen.getByText('11 Jan 2024, 13:30:00')).toBeVisible();
+      expect(screen.getByText('11 Jan 2024, 13:30:00')).toBeVisible();
+    });
+  });
+
+  describe('SAP instances', () => {
+    it('should show SAP instances in host', () => {
+      const sapInstances = databaseInstanceFactory
+        .buildList(2)
+        .map((inst) => ({ ...inst, type: DATABASE_TYPE }))
+        .concat(
+          sapSystemApplicationInstanceFactory
+            .buildList(2)
+            .map((inst) => ({ ...inst, type: APPLICATION_TYPE }))
+        );
+      renderWithRouter(
+        <HostDetails
+          agentVersion="1.0.0"
+          userAbilities={userAbilities}
+          sapInstances={sapInstances}
+        />
+      );
+
+      const heading = screen.getByRole('heading', { name: 'SAP instances' });
+      const section = heading.closest('div').nextSibling;
+      const table = within(section).getByRole('table');
+      const rows = table.querySelectorAll('tbody > tr');
+
+      sapInstances.forEach((instance, index) => {
+        const row = rows[index];
+        const healthIcon = within(row).getByTestId('eos-svg-component');
+        expect(healthIcon).toBeInTheDocument();
+        const sidLink = within(row).getByRole('link', { name: instance.sid });
+        const href = instance.database_id
+          ? `/databases/${instance.database_id}`
+          : `/sap_systems/${instance.sap_system_id}`;
+        expect(sidLink).toHaveAttribute('href', href);
+        expect(
+          within(row).getByText(instance.instance_number)
+        ).toBeInTheDocument();
       });
     });
   });
@@ -281,8 +422,8 @@ describe('HostDetails component', () => {
     });
   });
 
-  describe('SUSE Manager', () => {
-    it('should show the summary of SUMA software updates', () => {
+  describe('SUSE Multi-Linux Manager', () => {
+    it('should show the summary of SUSE Multi-Linux Manager software updates', () => {
       const relevantPatches = faker.number.int(100);
       const upgradablePackages = faker.number.int(100);
 
@@ -311,7 +452,7 @@ describe('HostDetails component', () => {
       );
     });
 
-    it('should display software updates showing an error message when no SUMA updates data is available', () => {
+    it('should display software updates showing an error message when no SUSE Multi-Linux Manager updates data is available', () => {
       const relevantPatches = undefined;
       const upgradablePackages = undefined;
 
@@ -337,7 +478,7 @@ describe('HostDetails component', () => {
       expect(upgradablePackagesElement).toHaveTextContent('An error message');
     });
 
-    it('should show the summary of SUMA software updates in a loading state', () => {
+    it('should show the summary of SUSE Multi-Linux Manager software updates in a loading state', () => {
       const relevantPatches = faker.number.int(100);
       const upgradablePackages = faker.number.int(100);
 
@@ -358,16 +499,16 @@ describe('HostDetails component', () => {
 
   describe('last execution overview', () => {
     it('should be displayed when lastExecution has data inside', () => {
-      const passingCount = faker.number.int(100);
-      const warningCount = faker.number.int(100);
-      const criticalCount = faker.number.int(100);
+      const passingCount = faker.number.int({ min: 1, max: 99 });
+      const warningCount = passingCount + 100;
+      const criticalCount = passingCount + 200;
 
       const lastExecution = {
         data: {
-          completed_at: faker.date.past().toISOString(),
+          completed_at: '2024-01-10T23:30:00Z',
           passing_count: passingCount,
-          warning_ccount: warningCount,
-          critical_ccount: criticalCount,
+          warning_count: warningCount,
+          critical_count: criticalCount,
         },
       };
 
@@ -375,11 +516,13 @@ describe('HostDetails component', () => {
         <HostDetails
           agentVersion="2.0.0"
           lastExecution={lastExecution}
+          timezone="Pacific/Kiritimati"
           userAbilities={userAbilities}
         />
       );
 
       expect(screen.getByText(passingCount)).toBeInTheDocument();
+      expect(screen.getByText('11 Jan 2024, 13:30:00')).toBeInTheDocument();
     });
 
     it('should display nothing if lastExecution is an empty object', () => {
@@ -394,13 +537,14 @@ describe('HostDetails component', () => {
   });
 
   describe('operations', () => {
-    it('should disable operations button if host heartbeat is not passing', async () => {
+    it('should disable operations button if host data is stale', async () => {
       const user = userEvent.setup();
 
       renderWithRouter(
         <HostDetails
           agentVersion="2.0.0"
           heartbeat="critical"
+          staleAt={faker.date.past()}
           userAbilities={userAbilities}
           operationsEnabled
         />
@@ -500,7 +644,7 @@ describe('HostDetails component', () => {
             runningOperation={{
               operation,
               forbidden: true,
-              errors: ['error1', 'error2'],
+              errors: [{ detail: 'error1' }, { detail: 'error2' }],
             }}
             cleanForbiddenOperation={mockCleanForbiddenOperation}
           />
@@ -618,7 +762,7 @@ describe('HostDetails component', () => {
       const sapInstances = databaseInstanceFactory
         .buildList(1)
         .map((instance) => ({ ...instance, type: DATABASE_TYPE }))
-        .map((instance) => ({ ...instance, health: 'unknown' }));
+        .map((instance) => ({ ...instance, status: 'gray' }));
 
       renderWithRouter(
         <HostDetails
@@ -648,11 +792,11 @@ describe('HostDetails component', () => {
     it.each([
       {
         state: 'passing',
-        label: 'running',
+        label: 'Reporting',
       },
       {
         state: 'critical',
-        label: 'not running',
+        label: 'Not reporting',
       },
     ])('should show exporters state as $state', ({ state, label }) => {
       renderWithRouter(

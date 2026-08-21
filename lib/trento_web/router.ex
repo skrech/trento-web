@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule TrentoWeb.Router do
   use TrentoWeb, :router
   use Pow.Phoenix.Router
@@ -238,6 +241,14 @@ defmodule TrentoWeb.Router do
         scope "/tokens" do
           post "/", PersonalAccessTokensController, :create_personal_access_token
           delete "/:token_id", PersonalAccessTokensController, :revoke_personal_access_token
+        end
+
+        if Application.compile_env!(:trento, [:ai, :enabled]) do
+          scope "/ai_configuration" do
+            post "/", AIConfigurationController, :create_ai_configuration
+            patch "/", AIConfigurationController, :update_ai_configuration
+            delete "/", AIConfigurationController, :clear_ai_configuration
+          end
         end
       end
 

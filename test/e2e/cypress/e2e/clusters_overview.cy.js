@@ -1,10 +1,13 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import * as clustersOverviewPage from '../pageObject/clusters_overview_po';
 
 context('Clusters Overview', () => {
   before(() => clustersOverviewPage.preloadTestData());
 
   beforeEach(() => {
-    clustersOverviewPage.interceptClustersEndpoint();
+    clustersOverviewPage.interceptInitialDataFetch();
     clustersOverviewPage.visit();
     clustersOverviewPage.validateUrl();
   });
@@ -32,7 +35,7 @@ context('Clusters Overview', () => {
       after(() => clustersOverviewPage.restoreClusterName());
     });
 
-    // eslint-disable-next-line mocha/no-skipped-tests
+    // eslint-disable-next-line mocha/no-pending-tests
     describe.skip('Health status for each cluster is correct', () => {
       before(() => {
         clustersOverviewPage.apiSelectChecksForHealthyCluster();
@@ -86,6 +89,26 @@ context('Clusters Overview', () => {
       clustersOverviewPage.apiRestoreClusterHosts();
       clustersOverviewPage.clusterNameIsDisplayed();
       clustersOverviewPage.hanaCluster1TagsAreDisplayed();
+    });
+  });
+
+  describe('Stale data', () => {
+    before(() => {
+      clustersOverviewPage.startAllClustersAgentsHeartbeat();
+      clustersOverviewPage.visit();
+    });
+
+    after(() => clustersOverviewPage.stopAgentsHeartbeat());
+
+    it('should mark cluster data as stale when an agent composing the cluster stops reporting', () => {
+      clustersOverviewPage.stopHanaCluster1AgentHeartbeat();
+      clustersOverviewPage.hanaCluster1DataIsMarkedAsStale();
+    });
+
+    it('should mark cluster data as sync when the agent starts reporting data again', () => {
+      clustersOverviewPage.startHanaCluster1AgentHeartbeat();
+      clustersOverviewPage.apiRestoreClusterHosts();
+      clustersOverviewPage.hanaCluster1DataIsMarkedInSync();
     });
   });
 

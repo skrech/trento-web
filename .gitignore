@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 # The directory Mix will write compiled artifacts to.
 /_build/
 
@@ -46,3 +49,5 @@ config/dev.local.exs
 storybook-static
 
 .DS_Store
+
+/.claude/

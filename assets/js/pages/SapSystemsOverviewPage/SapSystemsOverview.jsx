@@ -1,8 +1,13 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { filter, uniq, flatMap } from 'lodash';
+import { filter } from 'lodash';
+import classNames from 'classnames';
 
-import { getEnsaVersionLabel } from '@lib/model/sapSystems';
+import { getEnsaVersionLabel, getSapSystemType } from '@lib/model/sapSystems';
+import { STALE_ROW } from '@lib/tables';
 
 import HealthIcon from '@common/HealthIcon';
 import PageHeader from '@common/PageHeader';
@@ -20,6 +25,7 @@ function SapSystemsOverview({
   databaseInstances,
   loading,
   userAbilities,
+  userTimezone,
   onTagAdd,
   onTagRemove,
   onInstanceCleanUp,
@@ -33,15 +39,23 @@ function SapSystemsOverview({
     pagination: true,
     usePadding: false,
     collapsedRowClassName: 'bg-gray-100',
+    rowClassName: ({ staleAt }) =>
+      classNames({
+        [STALE_ROW]: !!staleAt,
+      }),
     columns: [
       {
         title: 'Health',
         key: 'health',
         filterFromParams: true,
         filter: true,
-        render: (content) => (
+        render: (content, { staleAt }) => (
           <div className="ml-4">
-            <HealthIcon health={content} />
+            <HealthIcon
+              health={content}
+              staleAt={staleAt}
+              timezone={userTimezone}
+            />
           </div>
         ),
       },
@@ -79,14 +93,8 @@ function SapSystemsOverview({
       {
         title: 'Type',
         key: 'applicationInstances',
-        render: (content) =>
-          uniq(flatMap(content, ({ features }) => features.split('|')))
-            .filter((item) => item === 'J2EE' || item === 'ABAP')
-            .map((item) => (item === 'J2EE' ? 'JAVA' : item))
-            .toSorted()
-            .join('+'),
+        render: (content) => getSapSystemType(content),
       },
-
       {
         title: 'DB Address',
         key: 'dbAddress',
@@ -121,6 +129,7 @@ function SapSystemsOverview({
       <SAPSystemItemOverview
         sapSystem={sapSystem}
         userAbilities={userAbilities}
+        userTimezone={userTimezone}
         onCleanUpClick={(instance, type) => {
           setCleanUpModalOpen(true);
           setInstanceToDeregister(instance);
@@ -146,6 +155,7 @@ function SapSystemsOverview({
     }),
     tags: (sapSystem.tags && sapSystem.tags.map((tag) => tag.value)) || [],
     databaseId: sapSystem.database_id,
+    staleAt: sapSystem.stale_at,
   }));
 
   const counters = getCounters(data || []);

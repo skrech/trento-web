@@ -1,6 +1,9 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
-import { screen, fireEvent } from '@testing-library/react';
-import 'intersection-observer';
+import { faker } from '@faker-js/faker';
+import { screen, fireEvent, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import { renderWithRouter } from '@lib/test-utils';
@@ -11,6 +14,7 @@ import HomeHealthSummary from './HomeHealthSummary';
 const homeHealthSummaryData = [
   healthSummaryFactory.build({
     application_cluster_health: 'passing',
+    application_health: 'passing',
     database_cluster_health: 'passing',
     database_health: 'passing',
     hosts_health: 'critical',
@@ -19,25 +23,35 @@ const homeHealthSummaryData = [
     database_sid: 'HDD',
   }),
   healthSummaryFactory.build({
-    application_cluster_health: 'passing',
+    application_cluster_health: 'critical',
+    application_health: 'passing',
     database_health: 'passing',
-    hosts_health: 'critical',
+    hosts_health: 'passing',
     sapsystem_health: 'passing',
   }),
   healthSummaryFactory.build({
     database_cluster_health: 'passing',
-    database_health: 'passing',
-    hosts_health: 'critical',
+    database_health: 'critical',
+    hosts_health: 'passing',
     sapsystem_health: 'passing',
   }),
   healthSummaryFactory.build({
     application_cluster_id: null,
     database_cluster_id: null,
-    application_cluster_health: 'unknown',
-    database_cluster_health: 'unknown',
+    application_cluster_health: null,
+    database_cluster_health: null,
+    application_health: 'critical',
     database_health: 'passing',
-    hosts_health: 'critical',
+    hosts_health: 'passing',
     sapsystem_health: 'passing',
+  }),
+  healthSummaryFactory.build({
+    application_cluster_stale_at: faker.date.past(),
+    application_stale_at: faker.date.past(),
+    database_cluster_stale_at: faker.date.past(),
+    database_stale_at: faker.date.past(),
+    hosts_health: 'critical',
+    hosts_stale_at: faker.date.past(),
   }),
 ];
 
@@ -114,6 +128,34 @@ describe('HomeHealthSummary component', () => {
     ).toContain('/hosts?sid=NWD&sid=HDD');
   });
 
+  it('should display stale SAP systems with gray background and stale icons', () => {
+    renderWithRouter(
+      <HomeHealthSummary
+        sapSystemsHealth={homeHealthSummaryData}
+        loading={false}
+        userTimezone="Etc/UTC"
+      />
+    );
+
+    const rows = screen.getByRole('table').querySelectorAll('tbody > tr');
+    const inSyncRow = rows[0];
+    const staleRow = rows[4];
+
+    expect(inSyncRow).not.toHaveClass('bg-gray-100');
+    within(inSyncRow)
+      .getAllByRole('img', { name: /health/i })
+      .forEach((icon) => {
+        expect(icon).not.toHaveAttribute('data-stale');
+      });
+
+    expect(staleRow).toHaveClass('bg-gray-100');
+    within(staleRow)
+      .getAllByRole('img', { name: /health/i })
+      .forEach((icon) => {
+        expect(icon).toHaveAttribute('data-stale');
+      });
+  });
+
   describe('health box filter behaviour', () => {
     it('should put the filters values in the query string when health filters are selected', async () => {
       const { container } = renderWithRouter(
@@ -123,12 +165,12 @@ describe('HomeHealthSummary component', () => {
         />
       );
 
-      expect(container.querySelector('tbody').childNodes.length).toEqual(4);
+      expect(container.querySelector('tbody').childNodes.length).toEqual(5);
 
       const cases = [
         ['passing', 1],
         ['warning', 1],
-        ['critical', 4],
+        ['critical', 5],
       ];
 
       cases.forEach(([health, results]) => {

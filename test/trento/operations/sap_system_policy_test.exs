@@ -1,9 +1,12 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Operations.SapSystemPolicyTest do
   @moduledoc false
   use ExUnit.Case, async: true
 
-  require Trento.Enums.Health, as: Health
   require Trento.Operations.Enums.SapSystemOperations, as: SapSystemOperations
+  require Trento.SapSystems.Enums.Status, as: Status
 
   alias Trento.Operations.SapSystemPolicy
 
@@ -12,7 +15,7 @@ defmodule Trento.Operations.SapSystemPolicyTest do
   test "should forbid unknown operation" do
     sap_system = build(:sap_system)
 
-    assert {:error, ["Unknown operation"]} ==
+    assert {:error, [%{message: "Unknown operation", metadata: []}]} ==
              SapSystemPolicy.authorize_operation(:unknown, sap_system, %{})
   end
 
@@ -27,7 +30,13 @@ defmodule Trento.Operations.SapSystemPolicyTest do
 
     for operation <- SapSystemOperations.values() do
       assert {:error,
-              ["Trento agent is not currently running in any of the hosts in the SAP system"]} ==
+              [
+                %{
+                  message:
+                    "Trento agent is not currently running in any of the hosts in the SAP system",
+                  metadata: []
+                }
+              ]} ==
                SapSystemPolicy.authorize_operation(operation, sap_system, %{})
     end
   end
@@ -44,7 +53,13 @@ defmodule Trento.Operations.SapSystemPolicyTest do
 
     for operation <- SapSystemOperations.values() do
       refute {:error,
-              ["Trento agent is not currently running in any of the hosts in the SAP system"]} ==
+              [
+                %{
+                  message:
+                    "Trento agent is not currently running in any of the hosts in the SAP system",
+                  metadata: []
+                }
+              ]} ==
                SapSystemPolicy.authorize_operation(operation, sap_system, %{})
     end
   end
@@ -52,6 +67,7 @@ defmodule Trento.Operations.SapSystemPolicyTest do
   describe "sap_system_start" do
     test "should forbid operation if the application cluster is not in maintenance" do
       %{
+        id: cluster_id,
         name: cluster_name,
         sap_instances: [%{sid: sid, instance_number: instance_number}],
         details: %{resources: [%{id: resource_id}]}
@@ -71,7 +87,11 @@ defmodule Trento.Operations.SapSystemPolicyTest do
 
       assert {:error,
               [
-                "Cluster #{cluster_name} or resource #{resource_id} operating this host are not in maintenance mode"
+                %{
+                  message:
+                    "Cluster {0} or resource #{resource_id} operating this host are not in maintenance mode",
+                  metadata: [%{id: cluster_id, label: cluster_name, type: :cluster}]
+                }
               ]} ==
                SapSystemPolicy.authorize_operation(:sap_system_start, sap_system, %{
                  instance_type: "all"
@@ -82,9 +102,9 @@ defmodule Trento.Operations.SapSystemPolicyTest do
       sap_system =
         build(:sap_system,
           database_instances: [
-            %{sid: sid} =
+            %{database_id: database_id, sid: sid} =
               build(:database_instance,
-                health: Health.unknown(),
+                status: Status.gray(),
                 system_replication: nil
               )
           ],
@@ -94,7 +114,13 @@ defmodule Trento.Operations.SapSystemPolicyTest do
             )
         )
 
-      assert {:error, ["Database #{sid} is not started"]} ==
+      assert {:error,
+              [
+                %{
+                  message: "Database {0} is not started",
+                  metadata: [%{id: database_id, label: sid, type: :database}]
+                }
+              ]} ==
                SapSystemPolicy.authorize_operation(:sap_system_start, sap_system, %{
                  instance_type: "abap"
                })
@@ -104,14 +130,14 @@ defmodule Trento.Operations.SapSystemPolicyTest do
       sap_system =
         build(:sap_system,
           database_instances: [
-            %{sid: sid} =
+            %{database_id: database_id, sid: sid} =
               build(:database_instance,
-                health: Health.unknown(),
+                status: Status.gray(),
                 system_replication: "Primary",
                 system_replication_site: "Site1"
               ),
             build(:database_instance,
-              health: Health.passing(),
+              status: Status.green(),
               system_replication: "Secondary"
             )
           ],
@@ -121,7 +147,13 @@ defmodule Trento.Operations.SapSystemPolicyTest do
             )
         )
 
-      assert {:error, ["Database #{sid} primary site Site1 is not started"]} ==
+      assert {:error,
+              [
+                %{
+                  message: "Database {0} primary site Site1 is not started",
+                  metadata: [%{id: database_id, label: sid, type: :database}]
+                }
+              ]} ==
                SapSystemPolicy.authorize_operation(:sap_system_start, sap_system, %{
                  instance_type: "abap"
                })
@@ -134,14 +166,20 @@ defmodule Trento.Operations.SapSystemPolicyTest do
           application_instances: [
             %{sid: sid, instance_number: inst_number} =
               build(:application_instance,
-                health: Health.unknown(),
+                status: Status.gray(),
                 features: "MESSAGESERVER|ENQUE",
                 host: build(:host, heartbeat: :passing, cluster: nil)
               )
           ]
         )
 
-      assert {:error, ["Instance #{inst_number} of SAP system #{sid} is not started"]} ==
+      assert {:error,
+              [
+                %{
+                  message: "Instance #{inst_number} of SAP system #{sid} is not started",
+                  metadata: []
+                }
+              ]} ==
                SapSystemPolicy.authorize_operation(:sap_system_start, sap_system, %{
                  instance_type: "abap"
                })
@@ -196,7 +234,7 @@ defmodule Trento.Operations.SapSystemPolicyTest do
         build(:sap_system,
           database_instances: [
             build(:database_instance,
-              health: Health.passing(),
+              status: Status.green(),
               system_replication: nil
             )
           ],
@@ -216,7 +254,7 @@ defmodule Trento.Operations.SapSystemPolicyTest do
           database_instances: [],
           application_instances: [
             build(:application_instance,
-              health: Health.passing(),
+              status: Status.green(),
               features: "MESSAGESERVER|ENQUE",
               host: build(:host, heartbeat: :passing, cluster: nil)
             )
@@ -242,7 +280,7 @@ defmodule Trento.Operations.SapSystemPolicyTest do
             database_instances: [],
             application_instances: [
               build(:application_instance,
-                health: Health.unknown(),
+                status: Status.gray(),
                 features: "MESSAGESERVER|ENQUE",
                 host: build(:host, heartbeat: :passing, cluster: nil)
               )
@@ -258,6 +296,7 @@ defmodule Trento.Operations.SapSystemPolicyTest do
   describe "sap_system_stop" do
     test "should forbid operation if the application cluster is not in maintenance" do
       %{
+        id: cluster_id,
         name: cluster_name,
         sap_instances: [%{sid: sid, instance_number: instance_number}],
         details: %{resources: [%{id: resource_id}]}
@@ -276,7 +315,11 @@ defmodule Trento.Operations.SapSystemPolicyTest do
 
       assert {:error,
               [
-                "Cluster #{cluster_name} or resource #{resource_id} operating this host are not in maintenance mode"
+                %{
+                  message:
+                    "Cluster {0} or resource #{resource_id} operating this host are not in maintenance mode",
+                  metadata: [%{id: cluster_id, label: cluster_name, type: :cluster}]
+                }
               ]} ==
                SapSystemPolicy.authorize_operation(:sap_system_stop, sap_system, %{
                  instance_type: "all"
@@ -289,19 +332,25 @@ defmodule Trento.Operations.SapSystemPolicyTest do
           application_instances: [
             %{sid: sid, instance_number: inst_number} =
               build(:application_instance,
-                health: Health.passing(),
+                status: Status.green(),
                 features: "ABAP|GATEWAY|ICMAN|IGS",
                 host: build(:host, heartbeat: :passing, cluster: nil)
               ),
             build(:application_instance,
-              health: Health.passing(),
+              status: Status.green(),
               features: "MESSAGESERVER|ENQUE",
               host: build(:host, heartbeat: :critical, cluster: nil)
             )
           ]
         )
 
-      assert {:error, ["Instance #{inst_number} of SAP system #{sid} is not stopped"]} ==
+      assert {:error,
+              [
+                %{
+                  message: "Instance #{inst_number} of SAP system #{sid} is not stopped",
+                  metadata: []
+                }
+              ]} ==
                SapSystemPolicy.authorize_operation(:sap_system_stop, sap_system, %{
                  instance_type: "scs"
                })
@@ -354,7 +403,7 @@ defmodule Trento.Operations.SapSystemPolicyTest do
         build(:sap_system,
           application_instances: [
             build(:application_instance,
-              health: Health.passing(),
+              status: Status.green(),
               features: "MESSAGESERVER|ENQUE",
               host: build(:host, heartbeat: :passing, cluster: nil)
             )
@@ -372,7 +421,7 @@ defmodule Trento.Operations.SapSystemPolicyTest do
         build(:sap_system,
           application_instances: [
             build(:application_instance,
-              health: Health.unknown(),
+              status: Status.gray(),
               features: "MESSAGESERVER|ENQUE",
               host: build(:host, heartbeat: :passing, cluster: nil)
             )
@@ -390,12 +439,12 @@ defmodule Trento.Operations.SapSystemPolicyTest do
         build(:sap_system,
           application_instances: [
             build(:application_instance,
-              health: Health.unknown(),
+              status: Status.gray(),
               features: "J2EE|IGS",
               host: build(:host, heartbeat: :passing, cluster: nil)
             ),
             build(:application_instance,
-              health: Health.passing(),
+              status: Status.green(),
               features: "GATEWAY|MESSAGESERVER|ENQUE",
               host: build(:host, heartbeat: :passing, cluster: nil)
             )

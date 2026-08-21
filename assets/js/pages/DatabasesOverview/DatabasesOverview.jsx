@@ -1,8 +1,13 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { filter } from 'lodash';
+import classNames from 'classnames';
 
 import { DATABASE_TYPE } from '@lib/model/sapSystems';
+import { STALE_ROW } from '@lib/tables';
 
 import HealthIcon from '@common/HealthIcon';
 import PageHeader from '@common/PageHeader';
@@ -20,6 +25,7 @@ function DatabasesOverview({
   databaseInstances,
   loading,
   userAbilities,
+  userTimezone,
   onTagAdd,
   onTagRemove,
   onInstanceCleanUp,
@@ -32,15 +38,23 @@ function DatabasesOverview({
     pagination: true,
     usePadding: false,
     collapsedRowClassName: 'bg-gray-100',
+    rowClassName: ({ staleAt }) =>
+      classNames({
+        [STALE_ROW]: !!staleAt,
+      }),
     columns: [
       {
         title: 'Health',
         key: 'health',
         filter: true,
         filterFromParams: true,
-        render: (content) => (
+        render: (content, { staleAt }) => (
           <div className="ml-4">
-            <HealthIcon health={content} />
+            <HealthIcon
+              health={content}
+              staleAt={staleAt}
+              timezone={userTimezone}
+            />
           </div>
         ),
       },
@@ -120,6 +134,7 @@ function DatabasesOverview({
       <DatabaseItemOverview
         database={database}
         userAbilities={userAbilities}
+        userTimezone={userTimezone}
         onCleanUpClick={(instance, _type) => {
           setCleanUpModalOpen(true);
           setInstanceToDeregister(instance);
@@ -138,6 +153,7 @@ function DatabasesOverview({
       database_id: database.id,
     }),
     tags: (database.tags && database.tags.map((tag) => tag.value)) || [],
+    staleAt: database.stale_at,
   }));
 
   const counters = getCounters(data || []);

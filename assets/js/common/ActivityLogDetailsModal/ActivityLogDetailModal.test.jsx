@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -33,7 +36,9 @@ describe('ActivityLogDetailModal component', () => {
       userRelatedActivity = false,
     }) => {
       const { id } = entry;
-      render(<ActivityLogDetailModal open entry={toRenderedEntry(entry)} />);
+      await act(() =>
+        render(<ActivityLogDetailModal open entry={toRenderedEntry(entry)} />)
+      );
 
       expect(screen.getByText('ID')).toBeVisible();
       expect(screen.getByText(id)).toBeVisible();
@@ -62,7 +67,9 @@ describe('ActivityLogDetailModal component', () => {
   it('should render detail for unknown activity type', async () => {
     const unknownActivityType = faker.lorem.word();
     const entry = activityLogEntryFactory.build({ type: unknownActivityType });
-    render(<ActivityLogDetailModal open entry={toRenderedEntry(entry)} />);
+    await act(() =>
+      render(<ActivityLogDetailModal open entry={toRenderedEntry(entry)} />)
+    );
 
     const activityReferences = screen.getAllByText(unknownActivityType);
     expect(activityReferences).toHaveLength(2);
@@ -80,11 +87,11 @@ describe('ActivityLogDetailModal component', () => {
       metadata,
       type: unknownActivityType,
     });
-    await act(async () => {
+    await act(() =>
       renderWithRouter(
         <ActivityLogDetailModal open entry={toRenderedEntry(entry)} />
-      );
-    });
+      )
+    );
 
     expect(screen.getByText('Related Events')).toBeVisible();
     expect(screen.getByText('Show Events')).toBeVisible();
@@ -97,11 +104,11 @@ describe('ActivityLogDetailModal component', () => {
       metadata,
       type: unknownActivityType,
     });
-    await act(async () => {
+    await act(() =>
       renderWithRouter(
         <ActivityLogDetailModal open entry={toRenderedEntry(entry)} />
-      );
-    });
+      )
+    );
 
     expect(screen.queryByText('Related Events')).not.toBeInTheDocument();
     expect(screen.queryByText('Show Events')).not.toBeInTheDocument();
@@ -109,12 +116,14 @@ describe('ActivityLogDetailModal component', () => {
 
   it('should call onClose when the close button is clicked', async () => {
     const onClose = jest.fn();
-    render(
-      <ActivityLogDetailModal
-        open
-        entry={activityLogEntryFactory.build()}
-        onClose={onClose}
-      />
+    await act(() =>
+      render(
+        <ActivityLogDetailModal
+          open
+          entry={activityLogEntryFactory.build()}
+          onClose={onClose}
+        />
+      )
     );
 
     await userEvent.click(screen.getByText('Close'));

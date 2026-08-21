@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Clusters.Policy do
   @moduledoc """
   Policy for the Clusters resource
@@ -20,9 +23,7 @@ defmodule Trento.Clusters.Policy do
   def authorize(operation, %User{} = user, ClusterReadModel)
       when operation in ClusterOperations.values() or
              operation in ClusterHostOperations.values(),
-      do:
-        has_global_ability?(user) or
-          user_has_ability?(user, %{name: to_ability_name(operation), resource: "cluster"})
+      do: has_operation_ability?(user, to_ability_name(operation), "cluster")
 
   def authorize(_, _, _), do: true
 

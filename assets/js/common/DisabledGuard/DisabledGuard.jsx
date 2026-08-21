@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 import { isPermitted } from '@lib/model/users';
 
@@ -13,8 +16,8 @@ const DEFAULT_TOOLTIP_MESSAGE = 'You are not authorized for this action';
 // supersedes the original tooltip in case of unauthorized access.
 
 function DisabledGuard({
-  userAbilities,
-  permitted,
+  userAbilities = [],
+  permitted = [],
   withTooltip = true,
   tooltipWrap = false,
   tooltipMessage = DEFAULT_TOOLTIP_MESSAGE,

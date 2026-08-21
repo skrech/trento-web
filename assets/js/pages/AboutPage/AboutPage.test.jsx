@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 import '@testing-library/jest-dom';
 import { aboutFactory } from '@lib/test-utils/factories';
@@ -6,7 +9,13 @@ import { renderWithRouter } from '@lib/test-utils';
 import AboutPage from './AboutPage';
 
 describe('AboutPage component', () => {
-  const apiRequestData = aboutFactory.build();
+  const apiRequestData = aboutFactory.build({
+    wanda_version: '1.0.0-wanda',
+    checks_version: '1.0.0-checks',
+    postgres_version: '1.0.0-postgres',
+    rabbitmq_version: '1.0.0-rabbitmq',
+    prometheus_version: '1.0.0-prometheus',
+  });
   it('should render the about page with content from the api', async () => {
     await act(async () => {
       renderWithRouter(
@@ -18,6 +27,33 @@ describe('AboutPage component', () => {
     expect(
       screen.getByText(`${apiRequestData.sles_subscriptions} found`)
     ).toBeTruthy();
+    expect(screen.getByText(apiRequestData.wanda_version)).toBeTruthy();
+    expect(screen.getByText(apiRequestData.checks_version)).toBeTruthy();
+    expect(screen.getByText(apiRequestData.postgres_version)).toBeTruthy();
+    expect(screen.getByText(apiRequestData.rabbitmq_version)).toBeTruthy();
+    expect(screen.getByText(apiRequestData.prometheus_version)).toBeTruthy();
+  });
+
+  it('should render N/A when component versions are null', async () => {
+    const dataWithNullVersions = {
+      ...apiRequestData,
+      wanda_version: null,
+      checks_version: null,
+      postgres_version: null,
+      rabbitmq_version: null,
+      prometheus_version: null,
+    };
+
+    await act(async () => {
+      renderWithRouter(
+        <AboutPage
+          onFetch={() => Promise.resolve({ data: dataWithNullVersions })}
+        />
+      );
+    });
+
+    const naElements = screen.getAllByText('N/A');
+    expect(naElements).toHaveLength(5);
   });
 
   it('should render the about page with default values if api get request fails', async () => {

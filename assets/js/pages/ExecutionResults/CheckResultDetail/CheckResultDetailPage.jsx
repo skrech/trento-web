@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useEffect } from 'react';
 import { find, get, some } from 'lodash';
 import { useDispatch, useSelector } from 'react-redux';
@@ -124,7 +127,12 @@ function CheckResultDetailPage({ targetType }) {
     );
   }
 
-  if (!target || !executionData || executionData.status === 'running') {
+  if (
+    !target ||
+    !executionData ||
+    executionData.status === 'running' ||
+    catalogLoading
+  ) {
     return (
       <div>
         <LoadingBox text="Loading..." />

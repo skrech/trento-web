@@ -1,7 +1,11 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import * as usersPage from '../pageObject/users_po';
 import * as basePage from '../pageObject/base_po';
 import * as loginPage from '../pageObject/login_po';
 import * as dashboardPage from '../pageObject/dashboard_po';
+import { getProviderLabel } from '@lib/ai';
 
 describe('Users', () => {
   describe('Create user', () => {
@@ -51,6 +55,26 @@ describe('Users', () => {
 
       usersPage.pageTitleIsCorrectlyDisplayed('Users');
       usersPage.newUserIsDisplayed();
+    });
+
+    it('should create user with timezone properly', () => {
+      const timezone = 'Pacific/Auckland';
+      usersPage.typeUserFullName();
+      usersPage.typeUserEmail();
+      usersPage.typeUserName();
+      usersPage.typeUserPassword();
+      usersPage.typeUserPasswordConfirmation();
+      usersPage.selectTimezone(timezone);
+      usersPage.clickSubmitUserCreationButton();
+      usersPage.userCreatedSuccessfullyToasterIsDisplayed();
+
+      usersPage.pageTitleIsCorrectlyDisplayed('Users');
+      usersPage.newUserIsDisplayed();
+
+      // Verify timezone was saved by editing the user
+      usersPage.clickNewUser();
+      usersPage.pageTitleIsCorrectlyDisplayed('Edit User');
+      usersPage.timezoneValueIsDisplayed(timezone);
     });
 
     it('should not allow creating the user with the same data', () => {
@@ -108,6 +132,21 @@ describe('Users', () => {
       usersPage.userAlreadyUpdatedWarningIsNotDisplayed();
       usersPage.pageTitleIsCorrectlyDisplayed('Users');
       usersPage.userWithModifiedNameIsDisplayed(fullname);
+    });
+
+    it('should edit timezone properly', () => {
+      usersPage.apiCreateUser();
+      usersPage.refresh();
+      usersPage.clickNewUser();
+      const timezone = 'Europe/Madrid';
+
+      usersPage.selectTimezone(timezone);
+      usersPage.clickEditUserSaveButton();
+      usersPage.userEditedSuccessfullyToasterIsDisplayed();
+      usersPage.pageTitleIsCorrectlyDisplayed('Users');
+
+      usersPage.clickNewUser();
+      usersPage.timezoneValueIsDisplayed(timezone);
     });
   });
 
@@ -168,6 +207,16 @@ describe('Users', () => {
       usersPage.typeUserFullName('new_name');
       usersPage.clickEditUserSaveButton();
       usersPage.profileChangesSavedToasterIsDisplayed();
+    });
+
+    it('should edit timezone properly from the profile view', () => {
+      const timezone = 'Europe/Berlin';
+
+      basePage.clickUserDropdownProfileButton();
+      usersPage.selectTimezone(timezone);
+      usersPage.clickEditUserSaveButton();
+      usersPage.profileChangesSavedToasterIsDisplayed();
+      usersPage.timezoneValueIsDisplayed(timezone);
     });
 
     it('should fail editing user password if current password is wrong', () => {
@@ -270,10 +319,10 @@ describe('Users', () => {
           usersPage.interceptDeleteTotpEnrollmentEndpoint();
           usersPage.clickDisableTotpButton();
           usersPage.removeTotpDialogTitleIsNotDisplayed();
-          usersPage.waitForTotpEnrollmentEndpoint().then(() => {
-            usersPage.clickAuthenticatorAppSwitch();
-            usersPage.newIssuedTotpSecretIsDifferent(totpSecret);
-          });
+          usersPage.waitForTotpEnrollmentEndpoint();
+          usersPage.authenticatorAppSwitchIsUnchecked();
+          usersPage.clickAuthenticatorAppSwitch();
+          usersPage.newIssuedTotpSecretIsDifferent(totpSecret);
         });
       });
     });
@@ -486,10 +535,225 @@ describe('Users', () => {
     });
   });
 
+  describe('AI Configuration', () => {
+    const GOOGLE_AI = 'googleai';
+    const OPEN_AI = 'openai';
+
+    beforeEach(() => {
+      basePage.logout();
+      usersPage.apiDeleteAllUsers();
+      usersPage.apiCreateUser();
+      usersPage.apiLoginAndCreateSession();
+      usersPage.apiAcceptAnalyticsEula(
+        usersPage.USER.username,
+        usersPage.PASSWORD
+      );
+      basePage.visit('/profile');
+    });
+
+    describe('AI Configuration Section', () => {
+      it('should display empty AI Configuration section in user profile', () => {
+        usersPage.aiConfigurationSectionIsDisplayed();
+        usersPage.aiConfigurationModelProviderShouldBe('None');
+        usersPage.aiConfigurationModelShouldBe('None');
+        usersPage.aiConfigurationApiKeyShouldBe('Not set');
+        usersPage.clearAIConfigurationButtonIsDisabled();
+      });
+
+      it('should display AI Configuration section in user profile', () => {
+        usersPage
+          .apiCreateAIConfigurationWithFirstModel(GOOGLE_AI, 'test-api-key')
+          .then((model) => {
+            usersPage.refresh();
+            usersPage.aiConfigurationModelProviderShouldBe(
+              getProviderLabel(GOOGLE_AI)
+            );
+            usersPage.aiConfigurationModelShouldBe(model);
+            usersPage.aiConfigurationApiKeyShouldBe('••••••••');
+            usersPage.clearAIConfigurationButtonIsEnabled();
+          });
+      });
+    });
+
+    describe('Creating AI Configuration', () => {
+      it('should not allow user to create an AI configuration if the api key is not set', () => {
+        usersPage.clickEditAIConfigurationButton();
+        usersPage.selectAIProvider(getProviderLabel(GOOGLE_AI));
+        usersPage.selectFirstAIModel();
+
+        const shouldWaitForRequest = false;
+        usersPage.clickModalSaveAIConfigurationButton(shouldWaitForRequest);
+
+        usersPage.requiredAPIKeyErrorIsDisplayed();
+
+        usersPage.aiConfigurationModelProviderShouldBe('None');
+        usersPage.aiConfigurationModelShouldBe('None');
+        usersPage.aiConfigurationApiKeyShouldBe('Not set');
+      });
+
+      it('should not allow user to create an AI configuration if the api key is an empty content', () => {
+        usersPage.clickEditAIConfigurationButton();
+        usersPage.selectAIProvider(getProviderLabel(GOOGLE_AI));
+        usersPage.selectFirstAIModel();
+        usersPage.typeAIConfigurationApiKey('   ');
+
+        usersPage.clickModalSaveAIConfigurationButton();
+
+        usersPage.requiredAPIKeyErrorIsDisplayed("Can't be blank");
+
+        usersPage.aiConfigurationModelProviderShouldBe('None');
+        usersPage.aiConfigurationModelShouldBe('None');
+        usersPage.aiConfigurationApiKeyShouldBe('Not set');
+      });
+
+      it('should allow user to create an AI configuration', () => {
+        usersPage.aiConfigurationModelProviderShouldBe('None');
+        usersPage.aiConfigurationModelShouldBe('None');
+        usersPage.aiConfigurationApiKeyShouldBe('Not set');
+
+        usersPage.clickEditAIConfigurationButton();
+        usersPage.selectAIProvider(getProviderLabel(GOOGLE_AI));
+        usersPage.selectFirstAIModel().then((model) => {
+          usersPage.typeAIConfigurationApiKey('test-api-key');
+
+          usersPage.clickModalSaveAIConfigurationButton();
+
+          usersPage.aiConfigurationModelProviderShouldBe(
+            getProviderLabel(GOOGLE_AI)
+          );
+          usersPage.aiConfigurationModelShouldBe(model);
+          usersPage.aiConfigurationApiKeyShouldBe('••••••••');
+        });
+      });
+    });
+
+    describe('Updating AI Configuration', () => {
+      it('should not allow user to update an AI configuration if the api key is an empty content', () => {
+        usersPage
+          .apiCreateAIConfigurationWithFirstModel(GOOGLE_AI, 'test-api-key')
+          .then((initialModel) => {
+            usersPage.refresh();
+            usersPage.aiConfigurationModelProviderShouldBe(
+              getProviderLabel(GOOGLE_AI)
+            );
+            usersPage.aiConfigurationModelShouldBe(initialModel);
+            usersPage.aiConfigurationApiKeyShouldBe('••••••••');
+
+            usersPage.clickEditAIConfigurationButton();
+            usersPage.selectAIProvider(getProviderLabel(OPEN_AI));
+            usersPage.selectAnotherAIModel();
+            usersPage.typeAIConfigurationApiKey('  ');
+
+            usersPage.clickModalUpdateAIConfigurationButton();
+
+            usersPage.requiredAPIKeyErrorIsDisplayed("Can't be blank");
+
+            usersPage.aiConfigurationModelProviderShouldBe(
+              getProviderLabel(GOOGLE_AI)
+            );
+            usersPage.aiConfigurationModelShouldBe(initialModel);
+            usersPage.aiConfigurationApiKeyShouldBe('••••••••');
+          });
+      });
+
+      it('should allow user to update AI configuration', () => {
+        usersPage
+          .apiCreateAIConfigurationWithFirstModel(GOOGLE_AI, 'test-api-key')
+          .then((initialModel) => {
+            usersPage.refresh();
+            usersPage.aiConfigurationModelProviderShouldBe(
+              getProviderLabel(GOOGLE_AI)
+            );
+            usersPage.aiConfigurationModelShouldBe(initialModel);
+            usersPage.aiConfigurationApiKeyShouldBe('••••••••');
+          });
+
+        usersPage.clickEditAIConfigurationButton();
+        usersPage.selectAIProvider(getProviderLabel(OPEN_AI));
+        usersPage.selectAnotherAIModel().then((newModel) => {
+          usersPage.typeAIConfigurationApiKey('test-api-key');
+
+          usersPage.clickModalUpdateAIConfigurationButton();
+
+          usersPage.aiConfigurationModelProviderShouldBe(
+            getProviderLabel(OPEN_AI)
+          );
+          usersPage.aiConfigurationModelShouldBe(newModel);
+          usersPage.aiConfigurationApiKeyShouldBe('••••••••');
+        });
+      });
+
+      it('should allow user to partially update AI configuration', () => {
+        usersPage
+          .apiCreateAIConfigurationWithFirstModel(GOOGLE_AI, 'test-api-key')
+          .then((initialModel) => {
+            usersPage.refresh();
+            usersPage.aiConfigurationModelProviderShouldBe(
+              getProviderLabel(GOOGLE_AI)
+            );
+            usersPage.aiConfigurationModelShouldBe(initialModel);
+            usersPage.aiConfigurationApiKeyShouldBe('••••••••');
+          });
+
+        usersPage.clickEditAIConfigurationButton();
+        usersPage.selectAIProvider(getProviderLabel(OPEN_AI));
+        usersPage.selectAnotherAIModel().then((newModel) => {
+          // api key is unchanged
+
+          usersPage.clickModalUpdateAIConfigurationButton();
+
+          usersPage.aiConfigurationModelProviderShouldBe(
+            getProviderLabel(OPEN_AI)
+          );
+          usersPage.aiConfigurationModelShouldBe(newModel);
+          usersPage.aiConfigurationApiKeyShouldBe('••••••••');
+        });
+      });
+    });
+
+    describe('Clearing AI Configuration', () => {
+      it('should keep configuration when clear modal is dismissed', () => {
+        usersPage
+          .apiCreateAIConfigurationWithFirstModel(GOOGLE_AI, 'test-api-key')
+          .then((model) => {
+            usersPage.refresh();
+            usersPage.clearAIConfigurationButtonIsEnabled();
+            usersPage.clickClearAIConfigurationButton();
+            usersPage.clearAIConfigurationModalIsDisplayed();
+            usersPage.clickCancelClearAIConfiguration();
+            usersPage.clearAIConfigurationModalIsNotDisplayed();
+            usersPage.aiConfigurationModelProviderShouldBe(
+              getProviderLabel(GOOGLE_AI)
+            );
+            usersPage.aiConfigurationModelShouldBe(model);
+            usersPage.aiConfigurationApiKeyShouldBe('••••••••');
+          });
+      });
+
+      it('should clear the AI configuration on confirm', () => {
+        usersPage.apiCreateAIConfigurationWithFirstModel(
+          GOOGLE_AI,
+          'test-api-key'
+        );
+
+        usersPage.refresh();
+        usersPage.clickClearAIConfigurationButton();
+        usersPage.clearAIConfigurationModalIsDisplayed();
+        usersPage.clickConfirmClearAIConfiguration();
+        usersPage.clearAIConfigurationModalIsNotDisplayed();
+        usersPage.aiConfigurationModelProviderShouldBe('None');
+        usersPage.aiConfigurationModelShouldBe('None');
+        usersPage.aiConfigurationApiKeyShouldBe('Not set');
+        usersPage.clearAIConfigurationButtonIsDisabled();
+      });
+    });
+  });
+
   describe('Last login', () => {
     beforeEach(() => {
       usersPage.apiDeleteAllUsers();
       usersPage.apiCreateUser();
+      basePage.apiLoginAndCreateSession();
     });
 
     it('should have an empty last login field if the user has not logged in yet', () => {

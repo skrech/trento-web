@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Infrastructure.Prometheus.PrometheusApiTest do
   use ExUnit.Case
   use Trento.DataCase
@@ -6,8 +9,8 @@ defmodule Trento.Infrastructure.Prometheus.PrometheusApiTest do
   import Trento.Factory
 
   alias Trento.Charts.ChartTimeSeriesSample
-  alias Trento.Infrastructure.Prometheus.Adapter.HttpClient.Mock
   alias Trento.Infrastructure.Prometheus.PrometheusApi
+  alias Trento.Support.HttpClient.Mock
 
   setup_all do
     Mox.verify_on_exit!()

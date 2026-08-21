@@ -1,9 +1,14 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Operations.DatabaseInstancePolicy do
   @moduledoc """
   DatabaseInstanceReadModel operation policies
   """
 
   @behaviour Trento.Operations.PolicyBehaviour
+
+  alias Trento.Support.OperationsHelper
 
   alias Trento.Clusters.Projections.ClusterReadModel
   alias Trento.Databases.Projections.DatabaseInstanceReadModel
@@ -42,7 +47,8 @@ defmodule Trento.Operations.DatabaseInstancePolicy do
     end
   end
 
-  def authorize_operation(_, _, _), do: {:error, ["Unknown operation"]}
+  def authorize_operation(_, _, _),
+    do: {:error, [OperationsHelper.build_error("Unknown operation")]}
 
   defp get_cluster_resource_id(%ClusterReadModel{
          details: %{resources: resources}

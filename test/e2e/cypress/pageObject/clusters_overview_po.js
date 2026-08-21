@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 export * from './base_po.js';
 import * as basePage from './base_po.js';
 
@@ -10,12 +13,6 @@ import {
 const url = '/clusters';
 const clustersEndpoint = '/api/v2/clusters';
 const clustersEndpointAlias = 'clustersEndpoint';
-
-//Selectors
-const clusterNames = '.tn-clustername';
-const paginationNavigationButtons = 'div[class*="bg-gray-50"] ul button';
-const tableRows = 'tbody tr';
-const rowCells = 'td';
 
 //Test data
 export const healthyClusterName = healthyClusterScenario.clusterName;
@@ -41,6 +38,13 @@ const taggingRules = [
   ['hana_cluster_3', clusterTags.hana_cluster_3],
 ];
 
+//Selectors
+const clusterNames = '.tn-clustername';
+const paginationNavigationButtons = 'div[class*="bg-gray-50"] ul button';
+const tableRows = 'tbody tr';
+const rowCells = 'td';
+const hanaCluster1Row = `tr:contains("${hanaCluster1.name}")`;
+
 export const visit = () => basePage.visit(url);
 
 export const validateUrl = () => basePage.validateUrl(url);
@@ -53,29 +57,30 @@ export const waitForClustersEndpoint = () =>
 
 // UI Interactions
 
-export const setClusterTags = () => {
-  taggingRules.forEach(([clusterName, tag]) => {
-    basePage.addTagByColumnValue(clusterName, tag);
-  });
-};
+export const setClusterTags = () =>
+  cy
+    .wrap(taggingRules)
+    .each(([clusterName, tag]) =>
+      basePage.addTagByColumnValue(clusterName, tag)
+    );
 
 // Validations
 
-export const hanaCluster1TagsAreDisplayed = () => {
-  return cy
+export const hanaCluster1TagsAreDisplayed = () =>
+  cy
     .get(`tr:contains("${hanaCluster1.name}")`)
     .within(() =>
       cy
         .get(`span span:contains("${clusterTags[hanaCluster1.name]}")`)
         .should('be.visible')
     );
-};
 
 export const clusterNameLinkIsDisplayedAsId = (clusterName) => {
   const clusterID = _clusterIdByName(clusterName);
-  return waitForClustersEndpoint().then(() =>
-    cy.get(tableRows).eq(8).find(rowCells).eq(1).should('have.text', clusterID)
-  );
+  const clusterNameLinkCellSelector = `${tableRows} > ${rowCells}:nth-child(2):contains("${clusterID}")`;
+  basePage.waitForInitialDataFetch();
+  cy.get(tableRows).should('have.length', availableClusters.length);
+  return cy.get(clusterNameLinkCellSelector).should('have.text', clusterID);
 };
 
 export const allRegisteredClustersAreDisplayed = () =>
@@ -85,13 +90,16 @@ export const paginationButtonsAreDisabled = () =>
   cy.get(paginationNavigationButtons).should('be.disabled');
 
 export const clustersDataIsDisplayedAsExpected = () => {
-  return waitForClustersEndpoint().then(() => {
-    return cy.get(tableRows).each(($row, index) => {
-      const cluster = availableClusters[index];
-      cy.wrap($row).find('td').eq(1).should('have.text', cluster.name);
-      cy.wrap($row).find('td').eq(2).should('have.text', cluster.sid);
-      return cy.wrap($row).find('td').eq(5).should('have.text', cluster.type);
-    });
+  basePage.waitForInitialDataFetch();
+  cy.get(tableRows).should('have.length', availableClusters.length);
+  return cy.wrap(availableClusters).each((cluster, index) => {
+    const clusterNameSelector = `${tableRows}:eq(${index}) > ${rowCells}:eq(1)`;
+    const clusterSidSelector = `${tableRows}:eq(${index}) > ${rowCells}:eq(2)`;
+    const clusterTypeSelector = `${tableRows}:eq(${index}) > ${rowCells}:eq(5)`;
+
+    cy.get(clusterNameSelector).should('have.text', cluster.name);
+    cy.get(clusterSidSelector).should('have.text', cluster.sid);
+    return cy.get(clusterTypeSelector).should('have.text', cluster.type);
   });
 };
 
@@ -107,45 +115,47 @@ export const unhealthyClusterNameDisplaysUnhealthyState = () =>
     'fill-red-500'
   );
 
-export const clusterHealthIconHasExpectedClass = (clusterName, className) => {
-  return cy
+export const clusterHealthIconHasExpectedClass = (clusterName, className) =>
+  cy
     .get(`td:contains("${clusterName}")`)
     .parents('tr')
     .within(() =>
       cy.get('td').eq(0).find('svg').should('have.class', className)
     );
-};
 
-export const eachClusterTagsIsCorrectlyDisplayed = () => {
-  return taggingRules.forEach(([tag]) =>
-    cy.get(`span span:contains(${tag})`).should('be.visible')
-  );
-};
+export const eachClusterTagsIsCorrectlyDisplayed = () =>
+  cy
+    .wrap(taggingRules)
+    .each(([tag]) => cy.get(`span span:contains(${tag})`).should('be.visible'));
 
 export const clusterIsNotDisplayedWhenNodesAreDeregistered = () =>
   cy.get(`span span:contains("${hanaCluster1.name}")`).should('not.exist');
 
-export const clusterNameIsDisplayed = () => {
+export const clusterNameIsDisplayed = () =>
   cy.get(`span span:contains("${hanaCluster1.name}")`).should('be.visible');
-};
+
+export const hanaCluster1DataIsMarkedAsStale = () =>
+  basePage.elementIsMarkedStale(hanaCluster1Row);
+
+export const hanaCluster1DataIsMarkedInSync = () =>
+  basePage.elementIsMarkedInSync(hanaCluster1Row);
 
 // Helpers
 const _clusterIdByName = (clusterName) =>
   availableClusters.find(({ name }) => name === clusterName).id;
 
 // API Interactions
-const _apiRemoveTagByClusterId = (clusterId, tagId) => {
-  return basePage.apiLogin().then(({ accessToken }) =>
+const _apiRemoveTagByClusterId = (clusterId, tagId) =>
+  basePage.apiLogin().then(({ accessToken }) =>
     cy.request({
       url: `/api/v1/clusters/${clusterId}/tags/${tagId}`,
       method: 'DELETE',
       auth: { bearer: accessToken },
     })
   );
-};
 
-const _apiGetClusters = () => {
-  return basePage.apiLogin().then(({ accessToken }) => {
+const _apiGetClusters = () =>
+  basePage.apiLogin().then(({ accessToken }) => {
     const url = '/api/v2/clusters';
     return cy
       .request({
@@ -157,17 +167,18 @@ const _apiGetClusters = () => {
       })
       .then((response) => response);
   });
-};
 
-export const apiRemoveAllClusterTags = () => {
-  _apiGetClusters().then((response) => {
-    const clusterTags = _getClusterTags(response.body);
-    Object.entries(clusterTags).forEach(([clusterId, tags]) => {
-      tags.forEach((tag) => _apiRemoveTagByClusterId(clusterId, tag));
-    });
-  });
-  return basePage.refresh();
-};
+export const apiRemoveAllClusterTags = () =>
+  _apiGetClusters()
+    .then((response) => {
+      const clusterTags = _getClusterTags(response.body);
+      return cy
+        .wrap(Object.entries(clusterTags))
+        .each(([clusterId, tags]) =>
+          cy.wrap(tags).each((tag) => _apiRemoveTagByClusterId(clusterId, tag))
+        );
+    })
+    .then(() => basePage.refresh());
 
 const _getClusterTags = (jsonData) => {
   const clusterTags = {};
@@ -180,8 +191,27 @@ const _getClusterTags = (jsonData) => {
   return clusterTags;
 };
 
+const _getClustersAgentIds = () =>
+  basePage
+    .apiLogin()
+    .then(({ accessToken }) => {
+      const url = '/api/v1/hosts';
+      return cy.request({
+        method: 'GET',
+        url: url,
+        auth: {
+          bearer: accessToken,
+        },
+      });
+    })
+    .then(({ body }) =>
+      body.filter(({ cluster_id }) => cluster_id !== null).map(({ id }) => id)
+    );
+
 export const apiDeregisterAllClusterHosts = () =>
-  hanaCluster1.hosts.forEach((hostId) => basePage.apiDeregisterHost(hostId));
+  cy
+    .wrap(hanaCluster1.hosts)
+    .each((hostId) => basePage.apiDeregisterHost(hostId));
 
 export const apiRestoreClusterHosts = () =>
   basePage.loadScenario(`cluster-${hanaCluster1.name}-restore`);
@@ -195,13 +225,15 @@ export const apiSetTagsHanaCluster1 = () => {
   const tagsForCluster1 = taggingRules
     .filter(([cluster]) => cluster === 'hana_cluster_1')
     .map(([, tag]) => tag);
-  return tagsForCluster1.forEach((tag) => _apiSetTag('hana_cluster_1', tag));
+  return cy
+    .wrap(tagsForCluster1)
+    .each((tag) => _apiSetTag('hana_cluster_1', tag));
 };
 
-const apiRequestChecksExecution = (clusterId) => {
-  return basePage.apiLogin().then(({ accessToken }) => {
+export const apiRequestChecksExecution = (clusterId) =>
+  basePage.apiLogin().then(({ accessToken }) => {
     const url = `/api/v1/clusters/${clusterId}/checks/request_execution`;
-    cy.request({
+    return cy.request({
       method: 'POST',
       url: url,
       auth: {
@@ -209,7 +241,6 @@ const apiRequestChecksExecution = (clusterId) => {
       },
     });
   });
-};
 
 export const apiSelectChecksForHealthyCluster = () =>
   basePage.apiSelectChecks(
@@ -251,3 +282,14 @@ export const apiCreateUserWithClusterTagsAbilities = () =>
   basePage.apiCreateUserWithAbilities([
     { name: 'all', resource: 'cluster_tags' },
   ]);
+
+export const startHanaCluster1AgentHeartbeat = () =>
+  basePage.startAgentsHeartbeat([hanaCluster1.hosts[0]]);
+
+export const startAllClustersAgentsHeartbeat = () =>
+  _getClustersAgentIds().then((agentIds) =>
+    basePage.startAgentsHeartbeat(agentIds)
+  );
+
+export const stopHanaCluster1AgentHeartbeat = () =>
+  basePage.stopAgentsHeartbeat([hanaCluster1.hosts[0]]);

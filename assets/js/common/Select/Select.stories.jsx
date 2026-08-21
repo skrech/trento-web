@@ -1,80 +1,116 @@
-import React, { useState } from 'react';
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
 
-import { providers } from '@lib/model';
 import ProviderLabel from '@common/ProviderLabel';
+import { providers } from '@lib/model';
+import React from 'react';
+import { action } from 'storybook/actions';
 
-import Select, { createOptionRenderer } from '.';
+import { createOptionRenderer } from '.';
+import Select from './Select';
 
 export default {
   title: 'Components/Select',
-  components: Select,
+  component: Select,
   argTypes: {
-    optionsName: {
-      type: 'string',
-      description:
-        'The name of the options to be used in the "All `optionsName`" option',
-      control: {
-        type: 'text',
-      },
-    },
     options: {
-      type: 'array',
       description: 'The list of options to be rendered in the dropdown',
-      control: {
-        type: 'array',
-      },
+      control: { type: 'object' },
     },
     value: {
-      type: 'string',
-      description: 'The currently selected option',
-      control: {
-        type: 'text',
-      },
+      description:
+        'Control value. Used to change select value after it is mounted',
+      control: { type: 'object' },
+    },
+    initialValues: {
+      description:
+        'Initially selected values. Used only to prepopulate the select on mount',
+      control: { type: 'object' },
+    },
+    isDisabled: {
+      description: 'Component is disabled or not',
+      control: { type: 'boolean' },
+    },
+    isMulti: {
+      description: 'Component is multi value',
+      control: { type: 'boolean' },
+    },
+    isSearchable: {
+      description: 'Component is searchable',
+      control: { type: 'boolean' },
+    },
+    isClearable: {
+      description: 'Component selected options are clearable',
+      control: { type: 'boolean' },
     },
     renderOption: {
       description: 'A function to render each option in the dropdown',
-      table: {
-        type: { summary: '(item) => item' },
-      },
     },
     onChange: {
-      description: 'A function to be called when the selected option changes',
-      table: {
-        type: { summary: '() => {}' },
-      },
+      description: 'A function to be called when selected options are changed',
+      action: 'onChange',
+    },
+    component: {
+      description:
+        'Custom React Select component replacements for rendering Option, DropdownIndicator, ClearIndicator, and other select parts',
+      control: { type: 'object' },
+    },
+    selectClassNames: {
+      description:
+        'Custom className generator functions for styling Select components',
+      control: { type: 'object' },
+    },
+    unstyled: {
+      description:
+        'Whether to use unstyled react-select components and handle all styling externally',
+      control: { type: 'boolean' },
+    },
+    renderControlOption: {
+      description:
+        'Custom renderer function for displaying the selected option in the control',
+      action: 'callback',
+    },
+    filterOption: {
+      description:
+        'Custom filter function to determine which options match the search input',
+      action: 'callback',
     },
     className: {
-      type: 'string',
-      description: 'Extra classes to be applied to the component',
-      control: {
-        type: 'text',
-      },
+      description:
+        'Additional CSS classes to apply to the Select container wrapper',
+      control: { type: 'text' },
     },
-    disabled: {
-      type: 'boolean',
-      description: 'Whether the Select is disabled or not',
-      control: {
-        type: 'boolean',
-      },
-    },
-    args: {
-      disabled: false,
-    },
-  },
-  render: (args) => {
-    const [value, setValue] = useState(args.value);
-
-    return <Select value={value} onChange={setValue} {...args} />;
   },
 };
 
-const options = ['foo', 'bar', 'baz', 'qux'];
+const options = [
+  { value: 1, label: 'orange' },
+  { value: 2, label: 'apple' },
+  { value: 3, label: 'banana' },
+];
+
+const optionsWithTooltip = [
+  { value: 1, label: 'orange', tooltip: 'A nice orange' },
+  { value: 2, label: 'apple', tooltip: 'A nice apple' },
+  { value: 3, label: 'banana', tooltip: 'A nice banana' },
+];
 
 export const Default = {
   args: {
-    optionsName: 'optionz',
+    className: 'w-96',
+    components: undefined, // use default components
+    filterOption: undefined, // use default filterOption
+    isClearable: false,
+    isDisabled: false,
+    isMulti: false,
+    isSearchable: false,
+    onChange: action('onChange'),
     options,
-    value: 'bar',
+    renderControlOption: undefined,
+    renderOption: undefined, // use default renderOption
+    selectClassNames: undefined, // use default classNames
+    unstyled: true,
+    value: undefined,
   },
 };
 
@@ -85,11 +121,24 @@ export const WithAllOption = {
   },
 };
 
+export const WithTooltip = {
+  args: {
+    ...Default.args,
+    options: optionsWithTooltip,
+  },
+};
+
+export const WithInitialValues = {
+  args: {
+    ...Default.args,
+    initialValues: [options[0]],
+  },
+};
+
 const optionsToLabel = {
-  foo: '😁 Foo',
-  bar: '😛 Bar',
-  baz: '🤪 Baz',
-  qux: '🧐 Qux',
+  orange: '😁 Foo',
+  apple: '😛 Bar',
+  banana: '🤪 Baz',
 };
 
 const itemsOptionRenderer = createOptionRenderer('All Emojis!', (item) => (
@@ -98,7 +147,7 @@ const itemsOptionRenderer = createOptionRenderer('All Emojis!', (item) => (
 
 export const WithCustomOptionRenderer = {
   args: {
-    ...WithAllOption.args,
+    ...Default.args,
     renderOption: itemsOptionRenderer,
   },
 };
@@ -110,39 +159,51 @@ const providerOptionRenderer = createOptionRenderer(
 
 export const ProviderSelectionSample = {
   args: {
-    optionsName: 'providers',
+    ...Default.args,
     options: ['all', ...providers],
-    value: 'all',
+    initialValues: ['all'],
     renderOption: providerOptionRenderer,
   },
 };
 
-const structuredOptions = [
+export const Disabled = {
+  args: {
+    ...WithInitialValues.args,
+    isDisabled: true,
+  },
+};
+
+const disabledOptions = [
   'foo',
-  { value: 'bar', disabled: true },
+  { label: 'bar', value: 'bar', isDisabled: true },
   'baz',
   'qux',
 ];
 
 export const WithDisabledOption = {
   args: {
-    optionsName: 'structured emojis',
-    options: ['all', ...structuredOptions],
-    value: 'baz',
-    renderOption: itemsOptionRenderer,
+    ...Default.args,
+    options: ['all', ...disabledOptions],
   },
 };
 
-export const Disabled = {
+export const Multi = {
   args: {
     ...Default.args,
-    disabled: true,
+    isMulti: true,
   },
 };
 
-export const WithSelectedItemPrefix = {
+export const Searchable = {
   args: {
     ...Default.args,
-    selectedItemPrefix: '👉 ',
+    isSearchable: true,
+  },
+};
+
+export const Clearable = {
+  args: {
+    ...Multi.args,
+    isClearable: true,
   },
 };

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Clusters.ValueObjects.HanaClusterNode do
   @moduledoc """
   Represents the node of a HANA cluster.
@@ -23,6 +26,7 @@ defmodule Trento.Clusters.ValueObjects.HanaClusterNode do
     field :nameserver_actual_role, :string
     field :indexserver_actual_role, :string
     field :status, :string
+    field :is_majority_maker, :boolean, default: false
 
     # resources attribute is deprecated, moved to main details
     embeds_many :resources, ClusterResource

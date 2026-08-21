@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Infrastructure.Alerting.Alerting do
   @moduledoc """
   Provides a set of functions of Alerting related usecases.
@@ -66,6 +69,23 @@ defmodule Trento.Infrastructure.Alerting.Alerting do
       error ->
         error
     end
+  end
+
+  @spec notify_heartbeat_failed(String.t(), DateTime.t()) :: :ok
+  def notify_heartbeat_failed(host_id, failed_at) do
+    deliver_notification(fn %{sender: sender, recipient: recipient} ->
+      host =
+        HostReadModel
+        |> Trento.Repo.get!(host_id)
+        |> Trento.Repo.preload([:cluster, :application_instances, :database_instances])
+
+      EmailAlert.heartbeat_failed(
+        host,
+        failed_at,
+        sender: sender,
+        recipient: recipient
+      )
+    end)
   end
 
   defp notify_critical_component_health(component_fetcher) do

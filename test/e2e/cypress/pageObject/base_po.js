@@ -1,9 +1,9 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
+import { escapeRegExp } from 'lodash';
 import { TOTP } from 'totp-generator';
 import { createUserRequestFactory } from '@lib/test-utils/factories';
-
-// Test data
-const DEFAULT_USERNAME = Cypress.env('login_user');
-const DEFAULT_PASSWORD = Cypress.env('login_password');
 
 export const plainUser = {
   username: 'trentoidp',
@@ -46,6 +46,8 @@ const usernameMenu = `span[class="flex items-center"]:contains("${plainUser.user
 // UI Interactions
 export const visit = (url = '/') => cy.visit(url);
 
+export const goBack = () => cy.go('back');
+
 export const clickUsernameMenu = () => cy.get(usernameMenu).click();
 
 export const validateUrl = (url = '/') =>
@@ -53,14 +55,11 @@ export const validateUrl = (url = '/') =>
 
 export const refresh = () => cy.reload();
 
-export const addTagByColumnValue = (columnValue, tagValue) => {
-  return cy
+export const addTagByColumnValue = (columnValue, tagValue) =>
+  cy
     .get(`td:contains(${columnValue})`)
     .parents('tr')
-    .within(() => {
-      cy.get(addTagButtons).type(`${tagValue}{enter}`);
-    });
-};
+    .within(() => cy.get(addTagButtons).type(`${tagValue}{enter}`));
 
 export const clickActivityLogNavigationItem = () =>
   cy.get(navigation.activityLog).click();
@@ -104,22 +103,33 @@ export const typeNextGeneratedTotpCode = (
 ) => {
   const timeToWait = _getTotpWaitTime(forceNext);
 
-  return cy.wait(timeToWait).then(() => {
-    const { otp } = TOTP.generate(totpSecret);
-    return cy
-      .get(inputField)
-      .clear()
-      .type(otp)
-      .then(() => otp);
-  });
+  return cy.wait(timeToWait).then(() =>
+    cy.wrap(TOTP.generate(totpSecret)).then(({ otp }) =>
+      cy
+        .get(inputField)
+        .clear()
+        .type(otp)
+        .then(() => otp)
+    )
+  );
 };
+
+export const selectOptions = '[role="listbox"] [role="option"]';
 
 export const selectFromDropdown = (selector, choice) => {
   cy.get(selector).click();
-  return cy.get(`${selector} + div div:contains("${choice}")`).click();
+  return cy
+    .contains(selectOptions, new RegExp(`^${escapeRegExp(choice)}$`))
+    .click();
 };
 
+export const getSelectControlValue = (ariaLabel) =>
+  `div:has(> ${ariaLabel}) [class$="-singleValue"]`;
+
 export const clickOutside = () => cy.get('body').click();
+
+export const goNavigationMenuItem = (item) =>
+  cy.get(`a:contains("${item}")`).click();
 
 // UI Validations
 
@@ -135,14 +145,16 @@ export const userDropdownMenuButtonHasTheExpectedText = (username) =>
 export const pageTitleIsCorrectlyDisplayed = (title) =>
   cy.get(pageTitle).should('contain', title);
 
+export const healthIconIsCorrectlyDisplayed = (icon, health) =>
+  cy.get(icon).should('have.attr', 'data-health-state', health);
+
 export const accessForbiddenMessageIsDisplayed = () =>
   cy.get(accessForbiddenMessage).should('be.visible');
 
-export const validateItemNotPresentInNavigationMenu = (itemName) => {
-  return cy.get(navigation.navigationItems).each(($element) => {
-    cy.wrap($element).should('not.include.text', itemName);
-  });
-};
+export const validateItemNotPresentInNavigationMenu = (itemName) =>
+  cy
+    .get(navigation.navigationItems)
+    .each(($element) => cy.wrap($element).should('not.include.text', itemName));
 
 export const validateItemPresentInNavigationMenu = (navigationMenuItem) =>
   cy.get(`a:contains("${navigationMenuItem}")`).should('be.visible');
@@ -159,83 +171,114 @@ export const removeTagButtonIsDisabled = () =>
 export const removeTagButtonIsEnabled = () =>
   cy.get(removeEnv1TagButton).should('not.have.class', 'opacity-50');
 
+export const elementIsMarkedStale = (element, timeout = 20000) =>
+  cy.get(element, { timeout }).should('have.class', 'bg-gray-100');
+
+export const elementIsMarkedInSync = (element) =>
+  cy.get(element).should('not.have.class', 'bg-gray-100');
+
+export const healthIconIsMarkedStale = (icon, timeout = 20000) =>
+  cy.get(icon, { timeout }).should('have.attr', 'data-stale');
+
+export const healthIconIsMarkedInSync = (icon) =>
+  cy.get(icon).should('not.have.attr', 'data-stale');
+
 // API Interactions & Validations
 
-export const validateResponseStatusCode = (
-  endpointAlias,
-  expectedStatusCode
-) => {
-  return cy
+export const validateResponseStatusCode = (endpointAlias, expectedStatusCode) =>
+  cy
     .wait(`@${endpointAlias}`)
     .its('response.statusCode')
     .should('eq', expectedStatusCode);
+
+const getLoginCredentials = (username, password) => {
+  if (username !== undefined && password !== undefined) {
+    return cy.wrap({ username, password });
+  }
+
+  return cy
+    .env(['login_user', 'login_password'])
+    .then(({ login_user, login_password }) => ({
+      username: login_user,
+      password: login_password,
+    }));
 };
 
-export const apiLogin = (
-  username = DEFAULT_USERNAME,
-  password = DEFAULT_PASSWORD
-) => {
-  return cy
+const requestLogin = (credentials) =>
+  cy
     .request({
       method: 'POST',
       url: '/api/session',
-      body: { username, password },
+      body: credentials,
     })
     .then((response) => {
       const { access_token: accessToken, refresh_token: refreshToken } =
         response.body;
       return { accessToken, refreshToken };
     });
-};
 
-export const apiLoginAndCreateSession = (
-  username = DEFAULT_USERNAME,
-  password = DEFAULT_PASSWORD
-) => {
-  return cy.session([username, password], () => {
-    apiLogin(username, password).then(({ accessToken, refreshToken }) => {
-      window.localStorage.setItem('access_token', accessToken);
-      window.localStorage.setItem('refresh_token', refreshToken);
-    });
-  });
-};
+export const apiLogin = (username, password) =>
+  getLoginCredentials(username, password).then(requestLogin);
+
+export const apiLoginAndCreateSession = (username, password) =>
+  getLoginCredentials(username, password).then((credentials) =>
+    cy.session([credentials.username, credentials.password], () => {
+      requestLogin(credentials).then(({ accessToken, refreshToken }) => {
+        window.localStorage.setItem('access_token', accessToken);
+        window.localStorage.setItem('refresh_token', refreshToken);
+      });
+    })
+  );
 
 export const logout = () => {
   cy.window().then((win) => {
     win.localStorage.removeItem('access_token');
     win.localStorage.removeItem('refresh_token');
   });
-  Cypress.session.clearAllSavedSessions();
+  return Cypress.session.clearAllSavedSessions();
 };
 
-export const apiDeleteUser = (id, accessToken) => {
-  return cy.request({
+export const apiDeleteUser = (id, accessToken) =>
+  cy.request({
     url: `/api/v1/users/${id}`,
     method: 'DELETE',
     auth: { bearer: accessToken },
   });
-};
 
-export const apiDeleteAllUsers = () => {
-  return apiLogin().then(({ accessToken }) => {
-    cy.request({
-      url: '/api/v1/users',
-      method: 'GET',
-      auth: { bearer: accessToken },
-    }).then(({ body: users }) => {
-      users.forEach(({ id }) => {
-        if (id !== 1) apiDeleteUser(id, accessToken);
-      });
+export const apiDeleteAllUsers = () =>
+  apiLogin().then(({ accessToken }) =>
+    cy
+      .request({
+        url: '/api/v1/users',
+        method: 'GET',
+        auth: { bearer: accessToken },
+      })
+      .then(({ body: users }) =>
+        cy.wrap(users).each(({ id }) => {
+          if (id !== 1) return apiDeleteUser(id, accessToken);
+        })
+      )
+  );
+
+const hasRefreshToken = () =>
+  cy.window().then((win) => Boolean(win.localStorage.getItem('refresh_token')));
+
+export const waitForRequest = (
+  requestAlias,
+  { timeout = 5000, retryUnauthorized = true } = {}
+) =>
+  cy.wait(`@${requestAlias}`, { timeout: timeout }).then((request) => {
+    if (!retryUnauthorized || request.response.statusCode !== 401) {
+      return request;
+    }
+
+    return hasRefreshToken().then((hasToken) => {
+      if (!hasToken) return request;
+      return cy.wait(`@${requestAlias}`, { timeout: timeout });
     });
   });
-};
 
-export const waitForRequest = (requestAlias, timeout = 5000) =>
-  cy.wait(`@${requestAlias}`, { timeout: timeout });
-
-export const preloadTestData = ({
-  isDataLoadedFunc = isTestDataLoaded,
-} = {}) => {
+export const preloadTestData = ({ isDataLoadedFunc = isTestDataLoaded } = {}) =>
   /**
    * Preload required test data.
    * It must run photofinish scenario twice as the order of sent payloads is relevant
@@ -244,26 +287,52 @@ export const preloadTestData = ({
    */
   isDataLoadedFunc().then((isLoaded) => {
     if (!isLoaded) loadScenario('healthy-27-node-SAP-cluster');
+    return loadScenario('healthy-27-node-SAP-cluster');
   });
-  loadScenario('healthy-27-node-SAP-cluster');
-};
 
 export const loadScenario = (scenario) => {
-  const [projectRoot, photofinishBinary, webAPIHost, webAPIPort] = [
-    Cypress.env('project_root'),
-    Cypress.env('photofinish_binary'),
-    Cypress.env('web_api_host'),
-    Cypress.env('web_api_port'),
+  const [projectRoot, photofinishBinary] = [
+    Cypress.expose('project_root'),
+    Cypress.expose('photofinish_binary'),
   ];
-  if (photofinishBinary) {
-    cy.log(`Loading scenario "${scenario}"...`);
-    cy.exec(
-      `cd ${projectRoot} && ${photofinishBinary} run --url "http://${webAPIHost}:${webAPIPort}/api/v1/collect" ${scenario}`
-    );
-  } else {
-    cy.log(`Photofinish is not used.`);
+  const isTrentoProdInstance = Cypress.expose('web_mode') === 'prod';
+  const photofinishExecTimeout = isTrentoProdInstance ? 180000 : 60000;
+
+  const baseUrl = Cypress.config().baseUrl;
+
+  if (!photofinishBinary) {
+    cy.log('Photofinish binary not present');
+    return;
   }
+
+  let photofinishCommand = `cd ${projectRoot} && ${photofinishBinary} run --url "${baseUrl}/api/v1/collect" ${scenario}`;
+
+  const runPhotofinish = (apiKey) => {
+    photofinishCommand = apiKey
+      ? `${photofinishCommand} "${apiKey}"`
+      : photofinishCommand;
+    cy.log(`Shooting scenario "${scenario}" to: ${baseUrl}`);
+    return cy.exec(photofinishCommand, {
+      timeout: photofinishExecTimeout,
+    });
+  };
+
+  if (Cypress.expose('web_mode') === 'dev') return runPhotofinish();
+  else return getApiKey().then((apiKey) => runPhotofinish(apiKey));
 };
+
+export const getApiKey = () =>
+  apiLogin().then(({ accessToken }) =>
+    cy
+      .request({
+        url: '/api/v1/settings/api_key',
+        method: 'GET',
+        auth: {
+          bearer: accessToken,
+        },
+      })
+      .then((response) => response.body.generated_api_key)
+  );
 
 const isTestDataLoaded = () =>
   apiLogin().then(({ accessToken }) =>
@@ -278,8 +347,18 @@ const isTestDataLoaded = () =>
       .then(({ body }) => body.length !== 0)
   );
 
-export const apiCreateUserWithAbilities = (abilities) => {
-  return apiLogin().then(({ accessToken }) =>
+export const startAgentsHeartbeat = (agents) => {
+  if (Cypress.expose('web_mode') === 'dev') {
+    return cy.task('startAgentHeartbeat', { agents });
+  }
+
+  return getApiKey().then((apiKey) =>
+    cy.task('startAgentHeartbeat', { agents, apiKey })
+  );
+};
+
+export const apiCreateUserWithAbilities = (abilities) =>
+  apiLogin().then(({ accessToken }) =>
     cy
       .request({
         url: '/api/v1/abilities',
@@ -295,7 +374,7 @@ export const apiCreateUserWithAbilities = (abilities) => {
           ),
         }));
 
-        cy.request({
+        return cy.request({
           url: '/api/v1/users',
           method: 'POST',
           auth: { bearer: accessToken },
@@ -303,24 +382,22 @@ export const apiCreateUserWithAbilities = (abilities) => {
         });
       })
   );
-};
 
 export const apiAcceptAnalyticsEula = (
   username = user.username,
   pass = password
-) => {
-  return apiLogin(username, pass).then(({ accessToken }) => {
-    return cy.request({
+) =>
+  apiLogin(username, pass).then(({ accessToken }) =>
+    cy.request({
       url: '/api/v1/profile',
       method: 'PATCH',
       auth: { bearer: accessToken },
       body: { analytics_eula_accepted: true },
-    });
-  });
-};
+    })
+  );
 
-export const apiDeregisterHost = (hostId) => {
-  return isHostRegistered(hostId).then((isRegistered) => {
+export const apiDeregisterHost = (hostId) =>
+  isHostRegistered(hostId).then((isRegistered) => {
     if (isRegistered) {
       return apiLogin().then(({ accessToken }) => {
         const url = `/api/v1/hosts/${hostId}`;
@@ -334,15 +411,15 @@ export const apiDeregisterHost = (hostId) => {
       });
     } else return;
   });
-};
 
-export const stopAgentsHeartbeat = () => cy.task('stopAgentsHeartbeat');
+export const stopAgentsHeartbeat = (agents = []) =>
+  cy.task('stopAgentsHeartbeat', { agents });
 
-export const isHostRegistered = (hostId) => {
-  return apiLogin()
+export const isHostRegistered = (hostId) =>
+  apiLogin()
     .then(({ accessToken }) => {
       const url = '/api/v1/hosts/';
-      cy.request({
+      return cy.request({
         method: 'GET',
         url: url,
         auth: {
@@ -351,7 +428,6 @@ export const isHostRegistered = (hostId) => {
       });
     })
     .then(({ body }) => body.some((host) => host.id === hostId));
-};
 
 export const loginWithoutAbilities = () =>
   apiLoginAndCreateSession(user.username, password);
@@ -372,8 +448,8 @@ export const getResourceTags = (resourceResponse) => {
   return resourceTags;
 };
 
-export const apiSetTag = (resource, resourceId, tag) => {
-  return apiLogin().then(({ accessToken }) =>
+export const apiSetTag = (resource, resourceId, tag) =>
+  apiLogin().then(({ accessToken }) =>
     cy.request({
       url: `/api/v1/${resource}/${resourceId}/tags`,
       method: 'POST',
@@ -381,7 +457,6 @@ export const apiSetTag = (resource, resourceId, tag) => {
       body: { value: tag },
     })
   );
-};
 
 export const apiSelectChecks = (clusterId, checks) => {
   const checksBody = JSON.stringify({
@@ -394,7 +469,7 @@ export const apiSelectChecks = (clusterId, checks) => {
 
   return apiLogin().then(({ accessToken }) => {
     const url = `/api/v1/clusters/${clusterId}/checks`;
-    cy.request({
+    return cy.request({
       method: 'POST',
       url: url,
       body: checksBody,
@@ -406,8 +481,8 @@ export const apiSelectChecks = (clusterId, checks) => {
   });
 };
 
-export const saveSUMASettings = ({ url, username, password, ca_cert }) =>
-  clearSUMASettings().then(() => {
+export const saveSMLMSettings = ({ url, username, password, ca_cert }) =>
+  clearSMLMSettings().then(() =>
     apiLogin().then(({ accessToken }) =>
       cy.request({
         url: '/api/v1/settings/suse_manager',
@@ -422,10 +497,10 @@ export const saveSUMASettings = ({ url, username, password, ca_cert }) =>
           ...(ca_cert && { ca_cert }),
         },
       })
-    );
-  });
+    )
+  );
 
-export const clearSUMASettings = () =>
+export const clearSMLMSettings = () =>
   apiLogin().then(({ accessToken }) =>
     cy.request({
       url: '/api/v1/settings/suse_manager',
@@ -436,8 +511,8 @@ export const clearSUMASettings = () =>
     })
   );
 
-export const getAlertingSettings = () => {
-  return apiLogin().then(({ accessToken }) =>
+export const getAlertingSettings = () =>
+  apiLogin().then(({ accessToken }) =>
     cy.request({
       url: '/api/v1/settings/alerting',
       method: 'GET',
@@ -447,4 +522,29 @@ export const getAlertingSettings = () => {
       failOnStatusCode: false,
     })
   );
+
+export const interceptInitialDataFetch = () => {
+  cy.intercept('/api/v1/hosts').as('hostsInitialFetch');
+  cy.intercept('/api/v1/sap_systems').as('sapSystemsInitialFetch');
+  cy.intercept('/api/v1/databases').as('databasesInitialFetch');
+  return cy.intercept('/api/v2/clusters').as('clustersInitialFetch');
 };
+
+export const waitForInitialDataFetch = () => {
+  waitForRequest('hostsInitialFetch');
+  waitForRequest('sapSystemsInitialFetch');
+  waitForRequest('databasesInitialFetch');
+  return waitForRequest('clustersInitialFetch');
+};
+
+export const interceptRefreshTokenRequest = () =>
+  cy.intercept('/api/session/refresh').as('refreshEndpoint');
+
+export const waitForRefreshRequest = () => waitForRequest('refreshEndpoint');
+
+export const checkRefreshRequestCount = (count) =>
+  cy.get('@refreshEndpoint.all').should('have.length', count);
+
+// Other support helpers
+export const clearAccessTokenFromStorage = () =>
+  cy.clearLocalStorage('access_token');

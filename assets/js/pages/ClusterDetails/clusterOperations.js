@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import { curry, some, get, has, flow } from 'lodash';
 
 import {
@@ -161,7 +164,7 @@ export const getClusterHostOperations = curry(
       },
     },
     {
-      value: 'Start cluster in node',
+      value: 'Set node online in cluster',
       running: isOperationRunning(
         [runningOperation],
         clusterID,
@@ -179,7 +182,7 @@ export const getClusterHostOperations = curry(
       },
     },
     {
-      value: 'Stop cluster in node',
+      value: 'Set node offline in cluster',
       running: isOperationRunning(
         [runningOperation],
         clusterID,

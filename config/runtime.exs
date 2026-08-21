@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 import Config
 
 # config/runtime.exs is executed for all environments, including
@@ -11,6 +14,18 @@ if config_env() in [:prod, :demo] do
 
   config :trento,
     admin_user: admin_user
+
+  log_levels = ~w(debug info warning error)
+  log_level = System.get_env("LOG_LEVEL", "info")
+
+  if log_level not in log_levels do
+    raise """
+    environment variable LOG_LEVEL is invalid.
+    Valid values are: #{Enum.join(log_levels, ", ")}
+    """
+  end
+
+  config :logger, level: String.to_atom(log_level)
 
   database_url =
     System.get_env("DATABASE_URL") ||
@@ -207,6 +222,12 @@ if config_env() in [:prod, :demo] do
       ],
       hosts_checks_execution: [
         schedule: "*/#{System.get_env("CHECKS_INTERVAL", "5")} * * * *"
+      ],
+      prune_discovery_events: [
+        schedule: System.get_env("PRUNE_EVENTS_INTERVAL", "0 0 * * *"),
+        task:
+          {Trento.Discovery, :prune_discovery_events,
+           ["PRUNE_EVENTS_OLDER_THAN" |> System.get_env("10") |> String.to_integer()]}
       ]
     ]
 
@@ -378,4 +399,14 @@ if config_env() in [:prod, :demo] do
         }
       ]
   end
+
+  wanda_base_url = System.get_env("CHECKS_SERVICE_BASE_URL", "")
+
+  config :trento, :ai,
+    base_system_prompt: Application.app_dir(:trento, "priv/ai/BASE_SYSTEM_PROMPT.md"),
+    tool_sources: [
+      TrentoWeb.AI.ControllerToolSource,
+      {Trento.AI.RemoteOpenApiToolSource,
+       name: :wanda, spec_url: "#{wanda_base_url}/api/all/openapi"}
+    ]
 end

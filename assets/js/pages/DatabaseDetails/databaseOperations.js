@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import { curry, every, filter, flow, get } from 'lodash';
 
 import { DATABASE_START, DATABASE_STOP } from '@lib/operations';
@@ -29,7 +32,7 @@ export const getDatabaseOperations = (
       DATABASE_START,
       matchesSite(null)
     ),
-    disabled: disabled || every(database.instances, { health: 'passing' }),
+    disabled: disabled || every(database.instances, { status: 'green' }),
     permitted: ['start:database'],
     onClick: () => {
       setOperationModelOpen({ open: true, operation: DATABASE_START });
@@ -43,7 +46,7 @@ export const getDatabaseOperations = (
       DATABASE_STOP,
       matchesSite(null)
     ),
-    disabled: disabled || every(database.instances, { health: 'unknown' }),
+    disabled: disabled || every(database.instances, { status: 'gray' }),
     permitted: ['stop:database'],
     onClick: () => {
       setOperationModelOpen({ open: true, operation: DATABASE_STOP });
@@ -73,7 +76,7 @@ export const getDatabaseSiteOperations = curry(
           DATABASE_START,
           matchesSite(site)
         ),
-        disabled: disabled || every(siteInstances, { health: 'passing' }),
+        disabled: disabled || every(siteInstances, { status: 'green' }),
         permitted: ['start:database'],
         onClick: () => {
           setCurrentOperationSite(site);
@@ -88,7 +91,7 @@ export const getDatabaseSiteOperations = curry(
           DATABASE_STOP,
           matchesSite(site)
         ),
-        disabled: disabled || every(siteInstances, { health: 'unknown' }),
+        disabled: disabled || every(siteInstances, { status: 'gray' }),
         permitted: ['stop:database'],
         onClick: () => {
           setCurrentOperationSite(site);

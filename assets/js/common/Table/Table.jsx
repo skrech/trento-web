@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useState, useEffect } from 'react';
 import classNames from 'classnames';
 import { noop } from 'lodash';
@@ -11,7 +14,7 @@ import EmptyState from './EmptyState';
 import CollapsibleTableRow from './CollapsibleTableRow';
 
 const defaultCellRender = (content) => (
-  <p className="text-gray-900 whitespace-no-wrap">{content}</p>
+  <p className="whitespace-no-wrap">{content}</p>
 );
 
 const renderCells = (columns, item) => (
@@ -26,7 +29,7 @@ const renderCells = (columns, item) => (
           <td
             key={idx}
             className={classNames(
-              'px-5 py-5 border-b border-gray-200 bg-white',
+              'px-5 py-5 border-b border-gray-200',
               className,
               fontSize
             )}
@@ -59,6 +62,9 @@ const getFilterFunction = (column, value) =>
     ? column.filter(value, column.key)
     : getDefaultFilterFunction(value, column.key);
 
+const getRowClassName = (rowClassName, item) =>
+  typeof rowClassName === 'function' ? rowClassName(item) : rowClassName;
+
 const itemsPerPageOptions = [10, 20, 50, 75, 100];
 
 function Table({
@@ -72,6 +78,7 @@ function Table({
   header = null,
   rowKey = defaultRowKey,
   roundedTop = true,
+  ariaLabelledBy,
 }) {
   const {
     columns,
@@ -111,11 +118,15 @@ function Table({
       return [...acc, { key: curr.key, value: curr.value }];
     }, []);
 
-    setSearchParams(updateSearchParams(searchParams, filtersBoundToQs));
-  }, [filters, searchParams]);
+    setSearchParams(
+      (prev) => updateSearchParams(new URLSearchParams(prev), filtersBoundToQs),
+      { replace: true }
+    );
+  }, [filters]);
 
   useEffect(() => {
     if (!searchParamsEnabled) return;
+
     const filterFromQs = columnFiltersBoundToParams.reduce((acc, curr) => {
       const paramsFilterValue = searchParams.getAll(curr.key);
 
@@ -129,7 +140,32 @@ function Table({
       ];
     }, []);
 
-    if (filterFromQs.length) {
+    const hasActiveParamFilters = filters.some((f) =>
+      columnFiltersBoundToParams.some((col) => col.key === f.key)
+    );
+
+    // If there are no filters in the query string but there are active filters bound to params, clear them
+    if (filterFromQs.length === 0 && hasActiveParamFilters) {
+      setFilters(
+        filters.filter(
+          (f) => !columnFiltersBoundToParams.some((col) => col.key === f.key)
+        )
+      );
+      return;
+    }
+
+    const filtersChanged = filterFromQs.some((qsFilter) => {
+      const currentFilter = filters.find((f) => f.key === qsFilter.key);
+      return (
+        !currentFilter ||
+        currentFilter.value.length !== qsFilter.value.length ||
+        currentFilter.value.some((v, i) => v === qsFilter.value[i])
+      );
+    });
+
+    // Apply filters from qs only if they differ from current filters to avoid
+    // infinite loop of updates and unnecessary re-renders
+    if (filtersChanged) {
       setFilters(filterFromQs);
     }
   }, [searchParams]);
@@ -194,14 +230,20 @@ function Table({
             )}
           >
             {header}
-            <table className="min-w-full leading-normal table-fixed">
+            <table
+              className="min-w-full leading-normal table-fixed"
+              aria-labelledby={ariaLabelledBy}
+            >
               <thead>
                 <tr>
                   {collapsibleDetailRenderer && (
                     <th
                       key="collapsible"
                       scope="col"
-                      className={classNames('w-6 bg-gray-100', headerClassName)}
+                      className={classNames(
+                        'w-6 border-b bg-gray-100',
+                        headerClassName
+                      )}
                       aria-label="collapsible"
                     />
                   )}
@@ -221,7 +263,7 @@ function Table({
                             sortable
                               ? 'cursor-pointer hover:text-gray-700 '
                               : ''
-                          }px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-100`,
+                          }px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b bg-gray-100`,
                           headerClassName,
                           columnClassName
                         )}
@@ -237,7 +279,7 @@ function Table({
                   )}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="bg-white text-gray-900">
                 {renderedData.length === 0 ? (
                   <EmptyState
                     colSpan={
@@ -260,7 +302,7 @@ function Table({
                         renderCells={renderCells}
                         columns={columns}
                         colSpan={columns.length}
-                        className={rowClassName}
+                        className={getRowClassName(rowClassName, item)}
                         collapsedRowClassName={collapsedRowClassName}
                       />
                     );

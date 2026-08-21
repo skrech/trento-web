@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.SapSystems.Events.SapSystemRolledUp do
   @moduledoc """
   This event is emitted when a sap system roll-up is requested.
@@ -5,6 +8,7 @@ defmodule Trento.SapSystems.Events.SapSystemRolledUp do
   """
 
   alias Trento.Databases.Events.DatabaseRolledUp
+  alias Trento.Databases.Events.Upcaster.UpcastHelper
 
   use Trento.Support.Event
 
@@ -16,8 +20,28 @@ defmodule Trento.SapSystems.Events.SapSystemRolledUp do
     DatabaseRolledUp
   end
 
-  defevent resource: "sap_system", version: 2 do
+  defevent resource: "sap_system", version: 3 do
     field :sap_system_id, Ecto.UUID
     embeds_one :snapshot, Trento.SapSystems.SapSystem
   end
+
+  def upcast(params, _, 2), do: params
+
+  def upcast(
+        %{
+          "snapshot" => %{
+            "instances" => _instances
+          }
+        } = params,
+        _,
+        3
+      ) do
+    update_in(
+      params,
+      ["snapshot", "instances", Access.all()],
+      &UpcastHelper.upcast_health_to_status/1
+    )
+  end
+
+  def upcast(params, _, 3), do: params
 end

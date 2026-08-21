@@ -1,5 +1,8 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 import {
@@ -18,7 +21,9 @@ describe('GenerateTokenModal', () => {
     const user = userEvent.setup();
     const mockOnGenerate = jest.fn();
     const tokenName = 'My token';
-    render(<GenerateTokenModal isOpen onGenerate={mockOnGenerate} />);
+    await act(() =>
+      render(<GenerateTokenModal isOpen onGenerate={mockOnGenerate} />)
+    );
 
     expect(
       screen.getByRole('button', { name: 'Generate Token' })
@@ -41,7 +46,9 @@ describe('GenerateTokenModal', () => {
       const user = userEvent.setup();
       const mockOnGenerate = jest.fn();
       const tokenName = 'My token';
-      render(<GenerateTokenModal isOpen onGenerate={mockOnGenerate} />);
+      await act(() =>
+        render(<GenerateTokenModal isOpen onGenerate={mockOnGenerate} />)
+      );
 
       expect(
         screen.getByRole('button', { name: 'Generate Token' })
@@ -49,7 +56,9 @@ describe('GenerateTokenModal', () => {
 
       await user.type(screen.getByRole('textbox'), tokenName);
       await user.type(screen.getByRole('spinbutton'), '{backspace}3');
-      await user.click(screen.getByRole('button', { name: 'months' }));
+      await user.click(
+        screen.getByRole('combobox', { name: 'generate-key-expiration-time' })
+      );
       await user.click(screen.getByRole('option', { name: dateType }));
       await user.click(screen.getByRole('button', { name: 'Generate Token' }));
 
@@ -74,7 +83,9 @@ describe('GenerateTokenModal', () => {
   it('should run onClose when the close button is clicked', async () => {
     const user = userEvent.setup();
     const mockOnClose = jest.fn();
-    render(<GenerateTokenModal isOpen onClose={mockOnClose} />);
+    await act(() =>
+      render(<GenerateTokenModal isOpen onClose={mockOnClose} />)
+    );
 
     await user.click(screen.getByRole('button', { name: 'Close' }));
     expect(mockOnClose).toHaveBeenCalled();

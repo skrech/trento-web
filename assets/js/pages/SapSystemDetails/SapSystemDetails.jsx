@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useEffect } from 'react';
 import { useParams } from 'react-router';
 import { useSelector, useDispatch } from 'react-redux';
@@ -29,7 +32,7 @@ function SapSystemDetails() {
   const sapSystem = useSelector((state) =>
     getEnrichedSapSystemDetails(state, id)
   );
-  const { abilities } = useSelector(getUserProfile);
+  const { abilities, timezone } = useSelector(getUserProfile);
   const dispatch = useDispatch();
 
   const runningOperations = useSelector(getRunningOperationsList);
@@ -50,6 +53,7 @@ function SapSystemDetails() {
         type={APPLICATION_TYPE}
         system={sapSystem}
         userAbilities={abilities}
+        userTimezone={timezone}
         cleanUpPermittedFor={['cleanup:application_instance']}
         operationsEnabled={operationsEnabled}
         runningOperations={runningOperations}

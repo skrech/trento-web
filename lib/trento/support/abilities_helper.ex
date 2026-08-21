@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Support.AbilitiesHelper do
   @moduledoc """
   Helper functions for bodyguard policies
@@ -9,6 +12,17 @@ defmodule Trento.Support.AbilitiesHelper do
 
   def has_global_ability?(%User{} = user),
     do: user_has_ability?(user, %{name: "all", resource: "all"})
+
+  def has_operation_all_ability?(%User{} = user),
+    do: user_has_ability?(user, %{name: "operation", resource: "all"})
+
+  def has_operation_ability?(user, name, resource) do
+    Enum.any?([
+      has_global_ability?(user),
+      has_operation_all_ability?(user),
+      user_has_ability?(user, %{name: name, resource: resource})
+    ])
+  end
 
   def user_has_any_ability?(%User{} = user, abilities),
     do: Enum.any?(abilities, &user_has_ability?(user, &1))

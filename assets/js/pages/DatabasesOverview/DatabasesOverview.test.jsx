@@ -1,29 +1,87 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 import { screen, waitFor } from '@testing-library/react';
-import 'intersection-observer';
+
 import '@testing-library/jest-dom';
 import { faker } from '@faker-js/faker';
 import userEvent from '@testing-library/user-event';
 
-import { databaseFactory } from '@lib/test-utils/factories';
+import {
+  databaseFactory,
+  databaseInstanceFactory,
+} from '@lib/test-utils/factories';
 import { renderWithRouter } from '@lib/test-utils';
 import { filterTable, clearFilter } from '@lib/test-utils/table';
 
 import DatabasesOverview from './DatabasesOverview';
 
+const userAbilities = [{ name: 'all', resource: 'all' }];
+
 describe('DatabasesOverview component', () => {
+  describe('overview content', () => {
+    it('should display stale databases with gray background and stale icon', async () => {
+      const user = userEvent.setup();
+      const staleDate = faker.date.past().toISOString();
+      const databaseID = faker.string.uuid();
+      const database = databaseFactory.build({
+        id: databaseID,
+        health: 'passing',
+        stale_at: staleDate,
+      });
+
+      const databaseInstances = databaseInstanceFactory.buildList(2, {
+        database_id: databaseID,
+        stale_at: staleDate,
+      });
+
+      renderWithRouter(
+        <DatabasesOverview
+          databases={[database]}
+          databaseInstances={databaseInstances}
+          userAbilities={userAbilities}
+        />
+      );
+
+      const rows = screen.getByRole('table').querySelectorAll('tbody > tr');
+      expect(rows[0]).toHaveClass('bg-gray-100');
+
+      const healthCell = rows[0].querySelector('td:nth-child(2)');
+      const svgs = healthCell.querySelectorAll(
+        '[data-testid="eos-svg-component"]'
+      );
+      expect(svgs).toHaveLength(2);
+
+      const table = screen.getByRole('table');
+      await user.click(
+        table.querySelector('tbody tr:nth-child(1) td:nth-child(1)')
+      );
+
+      const detailsRow = screen
+        .getByRole('table')
+        .querySelectorAll('tbody > tr')[1];
+      expect(detailsRow).toHaveClass('bg-gray-100');
+
+      const instanceRows = detailsRow.querySelectorAll(
+        'div.table-row-group > div.table-row'
+      );
+      expect(instanceRows[0]).toHaveClass('bg-gray-100');
+    });
+  });
+
   describe('tag operations', () => {
     it('should disable tag creation and delete when user abilities are not compatible', () => {
       const database = databaseFactory.build({
         tags: [{ value: 'Tag1' }, { value: 'Tag2' }],
       });
-      const userAbilities = [{ name: 'all', resource: 'another_resource' }];
+      const abilities = [{ name: 'all', resource: 'another_resource' }];
 
       renderWithRouter(
         <DatabasesOverview
           databases={[database]}
           databaseInstances={database.database_instances}
-          userAbilities={userAbilities}
+          userAbilities={abilities}
         />
       );
 
@@ -41,7 +99,6 @@ describe('DatabasesOverview component', () => {
     it('should clean up database instance on request', async () => {
       const user = userEvent.setup();
       const mockedCleanUp = jest.fn();
-      const userAbilities = [{ name: 'all', resource: 'all' }];
 
       const database = databaseFactory.build();
 
@@ -117,8 +174,6 @@ describe('DatabasesOverview component', () => {
   });
 
   describe('filtering', () => {
-    const userAbilities = [{ name: 'all', resource: 'all' }];
-
     const scenarios = [
       {
         filter: 'Health',
@@ -155,7 +210,9 @@ describe('DatabasesOverview component', () => {
 
     it.each(scenarios)(
       'should filter the table content by $filter filter',
-      ({ filter, options, databases, expectedRows }) => {
+      async ({ filter, options, databases, expectedRows }) => {
+        const user = userEvent.setup();
+
         renderWithRouter(
           <DatabasesOverview
             databases={databases}
@@ -164,21 +221,24 @@ describe('DatabasesOverview component', () => {
           />
         );
 
-        options.forEach(async (option) => {
-          filterTable(filter, option);
-          screen.getByRole('table');
-          const table = await waitFor(() =>
+        for (const option of options) {
+          await filterTable(user, filter, option);
+
+          const table = screen.getByRole('table');
+          await waitFor(() =>
             expect(
-              table.querySelectorAll('tbody > tr.cursor-pointer')
+              table.querySelectorAll('tbody > tr:not([hidden])')
             ).toHaveLength(expectedRows)
           );
 
-          clearFilter(filter);
-        });
+          await clearFilter(user, filter);
+        }
       }
     );
 
-    it('should put the filters values in the query string when filters are selected', () => {
+    it('should put the filters values in the query string when filters are selected', async () => {
+      const user = userEvent.setup();
+
       const databases = databaseFactory.buildList(1, {
         tags: [{ value: 'Tag1' }],
       });
@@ -193,16 +253,20 @@ describe('DatabasesOverview component', () => {
         />
       );
 
-      [
+      const filters = [
         ['Health', health],
         ['SID', sid],
         ['Tags', tags[0].value],
-      ].forEach(([filter, option]) => {
-        filterTable(filter, option);
-      });
+      ];
 
-      expect(window.location.search).toEqual(
-        `?health=${health}&sid=${sid}&tags=${tags[0].value}`
+      for (const [filter, option] of filters) {
+        await filterTable(user, filter, option);
+      }
+
+      await waitFor(() =>
+        expect(window.location.search).toEqual(
+          `?health=${health}&sid=${sid}&tags=${tags[0].value}`
+        )
       );
     });
   });

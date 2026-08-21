@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule TrentoWeb.OpenApi.V1.Schema.Forbidden do
   @moduledoc """
   403 - Forbidden.
@@ -33,6 +36,7 @@ defmodule TrentoWeb.OpenApi.V1.Schema.Forbidden do
           ],
           items: %Schema{
             type: :object,
+            additionalProperties: false,
             properties: %{
               detail: %Schema{
                 type: :string,
@@ -45,6 +49,21 @@ defmodule TrentoWeb.OpenApi.V1.Schema.Forbidden do
                 description:
                   "A short summary indicating the forbidden status, used for quick identification and error handling.",
                 example: "Forbidden"
+              },
+              metadata: %Schema{
+                type: :array,
+                description:
+                  "List of additional metadata information to complement error details",
+                items: %Schema{
+                  type: :object,
+                  description: "Additional metadata information to complement error details",
+                  additionalProperties: true,
+                  example: %{
+                    id: "9876b7a8-2e1f-4b9a-8e7d-3a4b5c6d7e8f",
+                    label: "hana01",
+                    type: "host"
+                  }
+                }
               }
             }
           }

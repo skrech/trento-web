@@ -1,8 +1,10 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useState, useEffect } from 'react';
 import { noop } from 'lodash';
-import { format, parseISO } from 'date-fns';
-
 import Button from '@common/Button';
+import { formatDateTime, DEFAULT_TIMEZONE } from '@lib/timezones';
 import Input, { Password } from '@common/Input';
 import Label from '@common/Label';
 import AbilitiesMultiSelect from '@common/AbilitiesMultiSelect';
@@ -16,7 +18,6 @@ import {
   errorMessage,
 } from '@lib/forms';
 import { getError } from '@lib/api/validationErrors';
-
 import { generateValidPassword } from './generatePassword';
 
 const USER_ENABLED = 'Enabled';
@@ -37,6 +38,8 @@ function UserForm({
   lastLoginAt = '',
   analyticsEnabledConfig = false,
   analyticsEnabled,
+  timezone = DEFAULT_TIMEZONE,
+  timezones = [],
   errors = defaultErrors,
   saving = false,
   saveEnabled = true,
@@ -58,6 +61,8 @@ function UserForm({
   const [confirmPasswordErrorState, setConfirmPasswordError] = useState(null);
   const [statusState, setStatus] = useState(status);
   const [totpState, setTotpState] = useState(Boolean(totpEnabledAt));
+  const [timezoneState, setTimezone] = useState(timezone);
+  const [timezoneErrorState, setTimezoneError] = useState(null);
   const [selectedAbilities, setAbilities] = useState(
     userAbilities.map(({ id }) => id)
   );
@@ -68,6 +73,7 @@ function UserForm({
     setUsernameError(getError('username', errors));
     setPasswordError(getError('password', errors));
     setConfirmPasswordError(getError('password_confirmation', errors));
+    setTimezoneError(getError('timezone', errors));
   }, [errors]);
 
   const validateRequired = () => {
@@ -111,11 +117,13 @@ function UserForm({
     }),
     abilities: abilities.filter(({ id }) => selectedAbilities.includes(id)),
     ...(totpEnabledAt && !totpState && { totp_disabled: true }),
+    timezone: timezoneState,
   });
 
   const buildSSOUserPayload = () => ({
     enabled: statusState === USER_ENABLED,
     abilities: abilities.filter(({ id }) => selectedAbilities.includes(id)),
+    timezone: timezoneState,
   });
 
   const onSaveClicked = () => {
@@ -135,6 +143,9 @@ function UserForm({
     setPassword(newPassword);
     setConfirmPassword(newPassword);
   };
+
+  const selectedTimezone =
+    timezones.find((opt) => opt.value === timezoneState) || null;
 
   return (
     <div>
@@ -260,13 +271,36 @@ function UserForm({
           <div className="col-start-3 col-span-4">
             <Select
               className="w-full"
-              optionsName="status"
+              aria-label="status"
               options={['Enabled', 'Disabled']}
-              value={statusState}
-              onChange={(value) => {
-                setStatus(value);
-              }}
+              initialValues={[statusState]}
+              onChange={setStatus}
             />
+          </div>
+          <Label
+            htmlFor="timezone"
+            className="col-start-1 col-span-2 sm:pt-2"
+            info={'Aligns timestamps according to timezone selection'}
+          >
+            Timezone
+          </Label>
+          <div className="col-start-3 col-span-4">
+            <Select
+              inputId="timezone"
+              name="timezone"
+              value={selectedTimezone}
+              options={timezones}
+              onChange={(value) => {
+                setTimezone(value || '');
+                setTimezoneError(null);
+              }}
+              isMulti={false}
+              isSearchable
+              disabled={!saveEnabled || saving}
+              placeholder="Select timezone..."
+              noOptionsMessage={() => 'No timezones found'}
+            />
+            {timezoneErrorState && errorMessage(timezoneErrorState)}
           </div>
           {editing && (
             <>
@@ -282,14 +316,18 @@ function UserForm({
                   <div className="col-start-3 col-span-4">
                     <Select
                       className="w-full"
-                      optionsName="totp"
+                      aria-label="totp-status"
                       options={[
-                        { value: 'Enabled', disabled: !totpEnabledAt },
+                        {
+                          value: 'Enabled',
+                          label: 'Enabled',
+                          isDisabled: !totpEnabledAt,
+                        },
                         'Disabled',
                       ]}
-                      value={totpState ? 'Enabled' : 'Disabled'}
-                      onChange={(value) => {
-                        setTotpState(value === 'Enabled');
+                      initialValues={[totpState ? 'Enabled' : 'Disabled']}
+                      onChange={(state) => {
+                        setTotpState(state === 'Enabled');
                       }}
                     />
                   </div>
@@ -309,15 +347,15 @@ function UserForm({
                 <>
                   <Label className="col-start-1 col-span-2">Created</Label>
                   <span className="col-start-3 col-span-4">
-                    {format(parseISO(createdAt), 'PPpp')}
+                    {formatDateTime(createdAt, timezone)}
                   </span>
                   <Label className="col-start-1 col-span-2">Updated</Label>
                   <span className="col-start-3 col-span-4">
-                    {format(parseISO(updatedAt), 'PPpp')}
+                    {formatDateTime(updatedAt, timezone)}
                   </span>
                   <Label className="col-start-1 col-span-2">Last Login</Label>
                   <span className="col-start-3 col-span-4">
-                    {lastLoginAt ? format(parseISO(lastLoginAt), 'PPpp') : '-'}
+                    {lastLoginAt ? formatDateTime(lastLoginAt, timezone) : '-'}
                   </span>
                 </>
               )}

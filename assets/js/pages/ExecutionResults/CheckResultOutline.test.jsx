@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { act } from 'react';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -19,6 +22,7 @@ import {
   emptyCheckResultFactory,
   agentsCheckResultsWithHostname,
   agentCheckErrorFactory,
+  agentCheckExcludedFactory,
   expectationResultFactory,
   catalogExpectExpectationFactory,
   catalogExpectSameExpectationFactory,
@@ -59,30 +63,18 @@ describe('CheckResultOutline Component', () => {
     const checkID = faker.string.uuid();
     const clusterName = faker.lorem.word();
 
-    // expectation names are not required to be uuids. using uuids for their uniqueness.
-    const expectationName1 = faker.string.uuid();
-    const expectationName2 = faker.string.uuid();
-    const expectationName3 = faker.string.uuid();
-    const expectSameExpectationName1 = faker.string.uuid();
-    const expectSameExpectationName2 = faker.string.uuid();
-
     const expectations = [
-      catalogExpectExpectationFactory.build({
-        name: expectationName1,
-      }),
-      catalogExpectExpectationFactory.build({
-        name: expectationName2,
-      }),
-      catalogExpectExpectationFactory.build({
-        name: expectationName3,
-      }),
-      catalogExpectSameExpectationFactory.build({
-        name: expectSameExpectationName1,
-      }),
-      catalogExpectSameExpectationFactory.build({
-        name: expectSameExpectationName2,
-      }),
+      ...catalogExpectExpectationFactory.buildList(3),
+      ...catalogExpectSameExpectationFactory.buildList(2),
     ];
+
+    const [
+      { name: expectationName1 },
+      { name: expectationName2 },
+      { name: expectationName3 },
+      { name: expectSameExpectationName1 },
+      { name: expectSameExpectationName2 },
+    ] = expectations;
 
     let checkResult = emptyCheckResultFactory.build({
       checkID,
@@ -220,17 +212,7 @@ describe('CheckResultOutline Component', () => {
     const checkID = faker.string.uuid();
     const clusterName = faker.animal.bear();
 
-    const expectationName1 = faker.company.name();
-    const expectationName2 = faker.color.human();
-
-    const expectations = [
-      catalogExpectExpectationFactory.build({
-        name: expectationName1,
-      }),
-      catalogExpectExpectationFactory.build({
-        name: expectationName2,
-      }),
-    ];
+    const expectations = catalogExpectExpectationFactory.buildList(2);
 
     const agentsCheckResults = agentsCheckResultsWithHostname(
       agentCheckErrorFactory.buildList(2)
@@ -258,5 +240,34 @@ describe('CheckResultOutline Component', () => {
 
     expect(screen.getAllByText(message1)).toHaveLength(1);
     expect(screen.getAllByText(message2)).toHaveLength(1);
+  });
+
+  it('should render an "Excluded by policy" row for a host excluded by policy', () => {
+    const checkID = faker.string.uuid();
+    const clusterName = faker.animal.bear();
+    const hostID = faker.string.uuid();
+    const hostName = faker.internet.domainName();
+
+    const expectations = catalogExpectExpectationFactory.buildList(1);
+
+    const agentsCheckResults = agentsCheckResultsWithHostname(
+      [agentCheckExcludedFactory.build({ agent_id: hostID })],
+      [{ id: hostID, hostname: hostName }]
+    );
+
+    renderWithRouter(
+      <CheckResultOutline
+        checkID={checkID}
+        targetName={clusterName}
+        targetType="cluster"
+        expectations={expectations}
+        agentsCheckResults={agentsCheckResults}
+        expectationResults={[]}
+      />
+    );
+
+    expect(screen.getAllByText(hostName)).toHaveLength(1);
+    expect(screen.getByText('Excluded by policy')).toBeInTheDocument();
+    expect(screen.queryByText(/Expectations met/)).not.toBeInTheDocument();
   });
 });

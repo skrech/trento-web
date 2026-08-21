@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Operations.PolicyBehaviour do
   @moduledoc """
   Behaviour of the operations policies.
@@ -17,6 +20,8 @@ defmodule Trento.Operations.PolicyBehaviour do
     SapSystemReadModel
   }
 
+  alias Trento.Support.OperationsHelper
+
   @callback authorize_operation(
               operation :: atom,
               read_model ::
@@ -27,5 +32,5 @@ defmodule Trento.Operations.PolicyBehaviour do
                 | HostReadModel.t()
                 | SapSystemReadModel.t(),
               params :: map
-            ) :: :ok | {:error, [String.t()]}
+            ) :: :ok | {:error, [OperationsHelper.forbidden_error()]}
 end

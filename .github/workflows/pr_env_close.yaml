@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 name: Pull request environment cleanup
 
 on:
@@ -12,6 +15,7 @@ concurrency:
 env:
   PR_ENV_LABEL: env
   PR_NUMBER: "${{ github.event.pull_request.number }}"
+  ANSIBLE_CORE_VERSION: "2.16.3" # https://pypi.org/project/ansible-core/#history
 
 jobs:
   check_env_creation_privilege:
@@ -30,9 +34,9 @@ jobs:
     if: needs.check_env_creation_privilege.outputs.create_env == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Comment on the pull request
-        uses: actions/github-script@v8
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -52,18 +56,18 @@ jobs:
       REGISTRY: ghcr.io
       IMAGE_TAG: ${{ github.event.pull_request.number }}-env
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
       - name: Log in to the Container registry
-        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Delete the container image
-        uses: bots-house/ghcr-delete-image-action@v1.1.0
+        uses: bots-house/ghcr-delete-image-action@3827559c68cb4dcdf54d813ea9853be6d468d3a4 # v1.1.0
         with:
           owner: ${{ github.repository_owner }}
           name: trento-web
@@ -76,7 +80,7 @@ jobs:
     needs: delete-pr-image
     steps:
       - name: Checkout ansible repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: trento-project/ansible
           path: ansible
@@ -84,11 +88,11 @@ jobs:
         if: ${{ env.ACT }}
         run: echo '/opt/pipx_bin' >> $GITHUB_PATH
       - name: Install ansible-core
-        run: sudo pipx install --force ansible-core==2.16.3
+        run: sudo pipx install --force ansible-core==${{ env.ANSIBLE_CORE_VERSION }}
       - name: Install galaxy deps
         run: ansible-galaxy install -r ansible/requirements.yml
       - name: Run playbook
-        uses: dawidd6/action-ansible-playbook@v9
+        uses: dawidd6/action-ansible-playbook@126642a1c6ce512da255ef2b41e8ee90f0077474 # v9
         with:
           playbook: ansible/playbook.cleanup.yml
           key: ${{ secrets.SSH_PR_MACHINE_KEY }}

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: SUSE LLC
+# SPDX-License-Identifier: Apache-2.0
+
 defmodule Trento.Clusters.ValueObjects.SbdDevice do
   @moduledoc """
   Represents the SBDDevice of a HANA cluster.
@@ -7,8 +10,10 @@ defmodule Trento.Clusters.ValueObjects.SbdDevice do
 
   use Trento.Support.Type
 
+  require Trento.Clusters.Enums.SbdDeviceStatus, as: SbdDeviceStatus
+
   deftype do
     field :device, :string
-    field :status, :string
+    field :status, Ecto.Enum, values: SbdDeviceStatus.values()
   end
 end

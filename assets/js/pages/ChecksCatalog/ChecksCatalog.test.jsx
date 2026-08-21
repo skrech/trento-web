@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 
 import { screen, render } from '@testing-library/react';
@@ -142,7 +145,7 @@ describe('ChecksCatalog ChecksCatalog component', () => {
       const expectItemEnabled = (itemExpectedEnabled) =>
         expect(
           screen.getByText(itemExpectedEnabled).closest('div')
-        ).not.toHaveAttribute('aria-disabled');
+        ).toHaveAttribute('aria-disabled', 'false');
 
       if (expectEnabled) {
         expectItemEnabled(expectEnabled);

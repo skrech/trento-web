@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -5,8 +8,9 @@ import '@testing-library/jest-dom';
 import { faker } from '@faker-js/faker';
 import { noop } from 'lodash';
 
-import { renderWithRouter as render } from '@lib/test-utils';
+import { renderWithRouter } from '@lib/test-utils';
 import { hostFactory, relevantPatchFactory } from '@lib/test-utils/factories';
+import { DEFAULT_TIMEZONE } from '@lib/timezones';
 
 import HostRelevantPatchesPage from './HostRelevantPatchesPage';
 
@@ -24,7 +28,13 @@ describe('HostRelevantPatchesPage', () => {
     it('displays the hostname', () => {
       const host = hostFactory.build();
 
-      render(<HostRelevantPatchesPage hostName={host.hostname} patches={[]} />);
+      renderWithRouter(
+        <HostRelevantPatchesPage
+          hostName={host.hostname}
+          patches={[]}
+          timezone={DEFAULT_TIMEZONE}
+        />
+      );
       expect(
         screen.getByRole('heading', {
           name: `Relevant Patches: ${host.hostname}`,
@@ -39,11 +49,17 @@ describe('HostRelevantPatchesPage', () => {
       );
       const user = userEvent.setup();
 
-      render(
-        <HostRelevantPatchesPage hostName={host.hostname} patches={patches} />
+      renderWithRouter(
+        <HostRelevantPatchesPage
+          hostName={host.hostname}
+          patches={patches}
+          timezone={DEFAULT_TIMEZONE}
+        />
       );
 
-      const advisorySelect = screen.getByRole('button', { name: 'all' });
+      const advisorySelect = screen.getByRole('combobox', {
+        name: 'advisories',
+      });
       await user.click(advisorySelect);
 
       expect(screen.getByRole('option', { name: 'all' })).toBeVisible();
@@ -59,13 +75,17 @@ describe('HostRelevantPatchesPage', () => {
     });
 
     it('shows an input for searching the patches', () => {
-      render(<HostRelevantPatchesPage patches={[]} />);
+      renderWithRouter(
+        <HostRelevantPatchesPage patches={[]} timezone={DEFAULT_TIMEZONE} />
+      );
 
       expect(screen.getByRole('textbox')).toBeVisible();
     });
 
     it('shows a button for downloading the data as CSV', () => {
-      render(<HostRelevantPatchesPage patches={[]} />);
+      renderWithRouter(
+        <HostRelevantPatchesPage patches={[]} timezone={DEFAULT_TIMEZONE} />
+      );
 
       expect(
         screen.getByRole('button', { name: 'Download CSV' })
@@ -73,11 +93,32 @@ describe('HostRelevantPatchesPage', () => {
     });
 
     it('shows the relevant patches component', () => {
-      render(<HostRelevantPatchesPage patches={[]} />);
+      renderWithRouter(
+        <HostRelevantPatchesPage patches={[]} timezone={DEFAULT_TIMEZONE} />
+      );
 
       expect(
         screen.getByRole('row', { name: 'Type Advisory Synopsis Updated' })
       ).toBeVisible();
+    });
+
+    it('renders patch update date according to the provided timezone', () => {
+      const timezone = 'Pacific/Kiritimati';
+      const patch = relevantPatchFactory.build({
+        update_date: '2024-01-10T23:30:00.000Z',
+        advisory_synopsis: 'timezone test',
+      });
+
+      renderWithRouter(
+        <HostRelevantPatchesPage
+          hostName="host"
+          patches={[patch]}
+          timezone={timezone}
+        />
+      );
+
+      expect(screen.getByText('11 Jan 2024')).toBeVisible();
+      expect(screen.getByText('timezone test')).toBeVisible();
     });
   });
 
@@ -85,7 +126,12 @@ describe('HostRelevantPatchesPage', () => {
     it('shows all patches by default', () => {
       const patches = relevantPatchFactory.buildList(8);
 
-      render(<HostRelevantPatchesPage patches={patches} />);
+      renderWithRouter(
+        <HostRelevantPatchesPage
+          patches={patches}
+          timezone={DEFAULT_TIMEZONE}
+        />
+      );
 
       patches.forEach((patch) => {
         expect(screen.getByText(patch.advisory_synopsis)).toBeVisible();
@@ -104,9 +150,16 @@ describe('HostRelevantPatchesPage', () => {
         (patch) => patch.advisory_type === filteredType
       );
 
-      render(<HostRelevantPatchesPage patches={patches} />);
+      renderWithRouter(
+        <HostRelevantPatchesPage
+          patches={patches}
+          timezone={DEFAULT_TIMEZONE}
+        />
+      );
 
-      const advisorySelect = screen.getByRole('button', { name: 'all' });
+      const advisorySelect = screen.getByRole('combobox', {
+        name: 'advisories',
+      });
       await user.click(advisorySelect);
       const advisoryOption = screen.getByRole('option', { name: filteredType });
       await user.click(advisoryOption);
@@ -122,8 +175,11 @@ describe('HostRelevantPatchesPage', () => {
       const patches = relevantPatchFactory.buildList(8);
       const searchTerm = patches[0].advisory_synopsis;
 
-      const { container } = render(
-        <HostRelevantPatchesPage patches={patches} />
+      const { container } = renderWithRouter(
+        <HostRelevantPatchesPage
+          patches={patches}
+          timezone={DEFAULT_TIMEZONE}
+        />
       );
 
       const searchInput = screen.getByRole('textbox');
@@ -152,7 +208,13 @@ describe('HostRelevantPatchesPage', () => {
 
       const patches = [];
 
-      render(<HostRelevantPatchesPage hostName={hostName} patches={patches} />);
+      renderWithRouter(
+        <HostRelevantPatchesPage
+          hostName={hostName}
+          patches={patches}
+          timezone={DEFAULT_TIMEZONE}
+        />
+      );
 
       const csvButton = screen.getByText('Download CSV');
 
@@ -176,7 +238,13 @@ describe('HostRelevantPatchesPage', () => {
         }),
       ];
 
-      render(<HostRelevantPatchesPage hostName={hostName} patches={patches} />);
+      renderWithRouter(
+        <HostRelevantPatchesPage
+          hostName={hostName}
+          patches={patches}
+          timezone={DEFAULT_TIMEZONE}
+        />
+      );
 
       const csvButton = screen.getByText('Download CSV');
       user.click(csvButton);

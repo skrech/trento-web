@@ -1,7 +1,11 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { act } from 'react';
 import { screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
+import { parseDateTimeLocalToUtc } from '@lib/timezones';
 
 import MockAdapter from 'axios-mock-adapter';
 
@@ -32,8 +36,8 @@ describe('ActivityLogPage', () => {
     await act(() => renderWithRouter(StatefulActivityLogPage));
     expect(screen.getByText('Filter Type...')).toBeInTheDocument();
     expect(screen.getByText('Filter User...')).toBeInTheDocument();
-    expect(screen.getByText('Filter newer than...')).toBeInTheDocument();
-    expect(screen.getByText('Filter older than...')).toBeInTheDocument();
+    expect(screen.getByText('Filter From date...')).toBeInTheDocument();
+    expect(screen.getByText('Filter To date...')).toBeInTheDocument();
     expect(
       screen.getByPlaceholderText('Filter by metadata')
     ).toBeInTheDocument();
@@ -143,12 +147,57 @@ describe('ActivityLogPage', () => {
         );
         await act(() => renderWithRouter(StatefulActivityLogPage));
 
-        const autorefreshButton = screen.getByRole('button', { name: 'Off' });
+        const autorefreshButton = screen.getByRole('combobox', {
+          name: 'refresh-rate',
+        });
 
         isEnabled
           ? expect(autorefreshButton).toBeEnabled()
           : expect(autorefreshButton).toBeDisabled();
       }
     );
+  });
+
+  it('should send from_date as timezone-aware ISO when custom date is selected', async () => {
+    const user = userEvent.setup();
+    const timezone = 'Pacific/Kiritimati';
+    const datetime = '2024-08-14T21:00';
+    const onGetSpy = jest.spyOn(networkClient, 'get');
+
+    axiosMock.onGet('/api/v1/activity_log').reply(200, { data: [] });
+
+    const [StatefulActivityLogPage] = withState(<ActivityLogPage />, {
+      ...defaultInitialState,
+      user: {
+        ...defaultInitialState.user,
+        timezone,
+      },
+    });
+
+    await act(() => renderWithRouter(StatefulActivityLogPage));
+
+    await user.click(screen.getByText('Filter From date...'));
+
+    const input = document.querySelector('input[type="datetime-local"]');
+    await user.click(input);
+    await user.clear(input);
+    await user.type(input, datetime);
+    await user.click(screen.getByText('Apply Filter'));
+
+    const expectedToDate = parseDateTimeLocalToUtc(
+      datetime,
+      timezone
+    ).toISOString();
+
+    expect(onGetSpy).toHaveBeenLastCalledWith(
+      '/activity_log',
+      expect.objectContaining({
+        params: expect.objectContaining({
+          from_date: expectedToDate,
+        }),
+      })
+    );
+
+    onGetSpy.mockRestore();
   });
 });

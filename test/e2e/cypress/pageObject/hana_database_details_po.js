@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 export * from './base_po';
 import * as basePage from './base_po';
 
@@ -21,12 +24,20 @@ const databaseTypeLabel =
 const systemReplicationLabel =
   'div[class*="grid-flow-row"]:contains("System Replication") div:nth-child(2)';
 const pageNotFoundLabel = 'div:contains("Not Found")';
+const stalenessBannerName =
+  /An agent in one of the database hosts is not reporting since/;
 const attachedHostsTableRows = 'div[class="mt-16"]:contains("Layout") tbody tr';
 const newRegisteredHost = `div[class="mt-8"]:contains("Hosts") td:contains("${attachedHosts[0].Name}")`;
 const layoutTableHostNameCell = (hostName) =>
   `div[class="mt-16"]:contains("Layout") td:contains("${hostName}")`;
 const hostsTableHostNameCell = (hostName) =>
   `div[class="mt-8"]:contains("Hosts") td:contains("${hostName}")`;
+const layoutTableHostRow = (hostName) =>
+  `div[class="mt-16"]:contains("Layout") tr:has(td:contains("${hostName}"))`;
+const hostsTableHostRow = (hostName) =>
+  `div[class="mt-8"]:contains("Hosts") tr:has(td:contains("${hostName}"))`;
+const siteReplicationHeader = (site) =>
+  `div[class*="border-gray-200"]:has(h3:contains("${site}"))`;
 const siteHeader = (site) => `div:has(div > h3:contains("${site}"))`;
 
 //UI Interactions
@@ -43,6 +54,14 @@ export const validatePageUrl = () =>
 
 export const validateNonExistentDatabaseUrl = () =>
   basePage.validateUrl(`${url}/other`);
+
+export const pageTitleHealthIsCorrectlyDisplayed = () => {
+  cy.findByRole('img', { name: /system health/i }).as('pageHealthIcon');
+  basePage.healthIconIsCorrectlyDisplayed(
+    '@pageHealthIcon',
+    selectedDatabase.Health
+  );
+};
 
 export const databaseHasExpectedName = () =>
   cy.get(databaseNameLabel).should('have.text', selectedDatabase.Sid);
@@ -61,14 +80,18 @@ export const pageNotFoundLabelIsDisplayed = () =>
 const hostNameHasExpectedInstanceNumber = (hostName) => {
   const instanceNumber = getHostAttribute(hostName, 'Instance');
   const hostNameCellSelector = layoutTableHostNameCell(hostName);
-  cy.get(hostNameCellSelector).next().should('have.text', instanceNumber);
+  return cy
+    .get(hostNameCellSelector)
+    .next()
+    .should('have.text', instanceNumber);
 };
 
 const hostNameHasExpectedFeatures = (hostName) => {
   const features = getHostAttribute(hostName, 'Features');
   const formattedFeatures = features.replace(/\|/g, '');
   const hostNameCellSelector = layoutTableHostNameCell(hostName);
-  cy.get(hostNameCellSelector)
+  return cy
+    .get(hostNameCellSelector)
     .nextAll()
     .eq(1)
     .should('have.text', formattedFeatures);
@@ -77,19 +100,28 @@ const hostNameHasExpectedFeatures = (hostName) => {
 const hostHasExpectedHttpPort = (hostName) => {
   const httpPort = getHostAttribute(hostName, 'HttpPort');
   const hostNameCellSelector = layoutTableHostNameCell(hostName);
-  cy.get(hostNameCellSelector).nextAll().eq(2).should('have.text', httpPort);
+  return cy
+    .get(hostNameCellSelector)
+    .nextAll()
+    .eq(2)
+    .should('have.text', httpPort);
 };
 
 const hostHasExpectedHttpsPort = (hostName) => {
   const httpsPort = getHostAttribute(hostName, 'HttpsPort');
   const hostNameCellSelector = layoutTableHostNameCell(hostName);
-  cy.get(hostNameCellSelector).nextAll().eq(3).should('have.text', httpsPort);
+  return cy
+    .get(hostNameCellSelector)
+    .nextAll()
+    .eq(3)
+    .should('have.text', httpsPort);
 };
 
 const hostHasExpectedStartPriority = (hostName) => {
   const startPriority = getHostAttribute(hostName, 'StartPriority');
   const hostNameCellSelector = layoutTableHostNameCell(hostName);
-  cy.get(hostNameCellSelector)
+  return cy
+    .get(hostNameCellSelector)
     .nextAll()
     .eq(4)
     .should('have.text', startPriority);
@@ -97,12 +129,10 @@ const hostHasExpectedStartPriority = (hostName) => {
 
 const hostStatusHasExpectedClass = (hostName) => {
   const status = getHostAttribute(hostName, 'Status');
-  validateHostClass(hostName, status);
+  return validateHostClass(hostName, status);
 };
 
-const getSiteContainer = (site) => {
-  return cy.get(siteHeader(site));
-};
+const getSiteContainer = (site) => cy.get(siteHeader(site));
 
 const siteHasExpectedName = (site) => {
   getSiteContainer(site).should('include.text', site);
@@ -134,24 +164,23 @@ const siteHasExpectedOperationMode = (site, operationMode) => {
 
 const validateHostClass = (hostName, status) => {
   const hostNameCellSelector = layoutTableHostNameCell(hostName);
-  cy.get(hostNameCellSelector)
-    .nextAll()
-    .eq(5)
+  return cy
+    .get(hostNameCellSelector)
+    .prev()
     .find('svg')
     .should('have.class', healthMap[status]);
 };
 
 const validateHostStatus = (hostName, status) => {
   const hostNameCellSelector = layoutTableHostNameCell(hostName);
-  cy.get(hostNameCellSelector)
-    .nextAll()
-    .eq(5)
-    .should('have.text', `SAPControl: ${status}`);
+  cy.get(hostNameCellSelector).prev().find('svg').trigger('mouseover');
+
+  return cy.get(`span:contains("${status}")`).should('exist');
 };
 
 const hostHasExpectedStatus = (hostName) => {
   const status = getHostAttribute(hostName, 'Status');
-  validateHostStatus(hostName, status);
+  return validateHostStatus(hostName, status);
 };
 
 export const hostHasStatus = (status) =>
@@ -160,21 +189,20 @@ export const hostHasStatus = (status) =>
 export const hostHasClass = (status) =>
   validateHostClass(selectedDatabase.Hosts[0].Hostname, status);
 
-export const eachHostNameHasExpectedValues = () => {
-  selectedDatabase.Hosts.forEach((host) => {
+export const eachHostNameHasExpectedValues = () =>
+  cy.wrap(selectedDatabase.Hosts).each((host) => {
     const hostName = host.Hostname;
+    hostHasExpectedStatus(hostName);
+    hostStatusHasExpectedClass(hostName);
     hostNameHasExpectedInstanceNumber(hostName);
     hostNameHasExpectedFeatures(hostName);
     hostHasExpectedHttpPort(hostName);
     hostHasExpectedHttpsPort(hostName);
-    hostHasExpectedStartPriority(hostName);
-    hostHasExpectedStatus(hostName);
-    hostStatusHasExpectedClass(hostName);
+    return hostHasExpectedStartPriority(hostName);
   });
-};
 
-export const eachSiteHasExpectedValues = (sites) => {
-  sites.forEach((site) => {
+export const eachSiteHasExpectedValues = (sites) =>
+  cy.wrap(sites).each((site) => {
     siteHasExpectedName(site.Name);
     siteHasExpectedSystemReplication(site.Name, site.SystemReplication);
     siteHasExpectedTier(site.Name, site.Tier);
@@ -185,19 +213,15 @@ export const eachSiteHasExpectedValues = (sites) => {
     site.OperationMode &&
       siteHasExpectedOperationMode(site.Name, site.OperationMode);
   });
-};
 
-export const runningSitesHaveExpectedValues = () => {
+export const runningSitesHaveExpectedValues = () =>
   eachSiteHasExpectedValues(selectedDatabase.Sites);
-};
 
-export const secondaryStoppedSitesHaveExpectedValues = () => {
+export const secondaryStoppedSitesHaveExpectedValues = () =>
   eachSiteHasExpectedValues(secondaryStoppedSites);
-};
 
-export const stoppedSitesHaveExpectedValues = () => {
+export const stoppedSitesHaveExpectedValues = () =>
   eachSiteHasExpectedValues(allStoppedSites);
-};
 
 const getHostAttribute = (hostname, attribute) => {
   const host = selectedDatabase.Hosts.find((h) => h.Hostname === hostname);
@@ -215,13 +239,17 @@ const hostHostHasExpectedAddresses = (hostName) => {
     hostName,
     'Addresses'
   ).join('');
-  cy.get(hostNameCellSelector).next().should('have.text', expectedAddresses);
+  return cy
+    .get(hostNameCellSelector)
+    .next()
+    .should('have.text', expectedAddresses);
 };
 
 const hostHasExpectedProvider = (hostName) => {
   const hostNameCellSelector = hostsTableHostNameCell(hostName);
   const expectedProviderValue = getAttachedHostAttribute(hostName, 'Provider');
-  cy.get(hostNameCellSelector)
+  return cy
+    .get(hostNameCellSelector)
     .nextAll()
     .eq(1)
     .should('have.text', expectedProviderValue);
@@ -230,7 +258,8 @@ const hostHasExpectedProvider = (hostName) => {
 const hostHasExpectedClusterValue = (hostName) => {
   const hostNameCellSelector = hostsTableHostNameCell(hostName);
   const expectedCluster = getAttachedHostAttribute(hostName, 'Cluster');
-  cy.get(hostNameCellSelector)
+  return cy
+    .get(hostNameCellSelector)
     .nextAll()
     .eq(2)
     .should('contain', expectedCluster);
@@ -239,7 +268,8 @@ const hostHasExpectedClusterValue = (hostName) => {
 const hostHasExpectedVersion = (hostName) => {
   const hostNameCellSelector = hostsTableHostNameCell(hostName);
   const expectedVersion = getAttachedHostAttribute(hostName, 'Version');
-  cy.get(hostNameCellSelector)
+  return cy
+    .get(hostNameCellSelector)
     .nextAll()
     .eq(3)
     .should('have.text', expectedVersion);
@@ -252,25 +282,24 @@ const hostHasExpectedWorkingLink = (host) => {
   cy.get(hostNameSelector).should('have.attr', 'href', expectedHref);
   cy.get(hostNameSelector).click();
   basePage.validateUrl(expectedHref);
-  cy.go('back');
+  return basePage.goBack();
 };
 
-export const eachAttachedHostHasExpectedValues = () => {
-  attachedHosts.forEach((host) => {
+export const eachAttachedHostHasExpectedValues = () =>
+  cy.wrap(attachedHosts).each((host) => {
     hostHostHasExpectedAddresses(host.Name);
     hostHasExpectedProvider(host.Name);
     hostHasExpectedClusterValue(host.Name);
-    hostHasExpectedVersion(host.Name);
+    return hostHasExpectedVersion(host.Name);
   });
-};
 
 export const eachAttachedHostHasExpectedWorkingLink = () =>
-  attachedHosts.forEach((host) => hostHasExpectedWorkingLink(host));
+  cy.wrap(attachedHosts).each((host) => hostHasExpectedWorkingLink(host));
 
 export const newInstanceIsDisplayed = () => {
   const newInstanceSelector = `div[class="mt-16"]:contains("Layout") td:contains("${selectedDatabase.Hosts[0].Hostname}")`;
   cy.get(newInstanceSelector).eq(1).should('be.visible');
-  cy.get(`${newInstanceSelector} + td`).eq(1).should('have.text', 11);
+  return cy.get(`${newInstanceSelector} + td`).eq(1).should('have.text', 11);
 };
 
 export const tableHasExpectedAmountOfRows = (expectedAmountOfRows) =>
@@ -280,7 +309,47 @@ export const deregisteredHostIsNotDisplayed = () =>
   cy.get(newRegisteredHost).should('not.exist');
 
 export const deregisteredHostIsDisplayed = () =>
-  cy.get(newRegisteredHost).should('be.visible');
+  cy.get(newRegisteredHost, { timeout: 20000 }).should('be.visible');
+
+export const databaseHealthIsMarkedAsStale = () => {
+  cy.findByRole('img', { name: /system health/i }).as('pageHealthIcon');
+  basePage.healthIconIsMarkedStale('@pageHealthIcon');
+};
+
+export const databaseHealthIsMarkedInSync = () => {
+  cy.findByRole('img', { name: /system health/i }).as('pageHealthIcon');
+  basePage.healthIconIsMarkedInSync('@pageHealthIcon');
+};
+
+export const databaseStaleBannerIsDisplayed = (timeout = 20000) =>
+  cy
+    .findByRole('alert', { name: stalenessBannerName, timeout })
+    .should('be.visible');
+
+export const databaseStaleBannerIsNotDisplayed = () =>
+  cy.findByRole('alert', { name: stalenessBannerName }).should('not.exist');
+
+export const databaseSiteIsMarkedAsStale = () =>
+  basePage.elementIsMarkedStale(
+    siteReplicationHeader(selectedDatabase.Sites[0].Name)
+  );
+
+export const databaseSiteIsMarkedInSync = () =>
+  basePage.elementIsMarkedInSync(
+    siteReplicationHeader(selectedDatabase.Sites[0].Name)
+  );
+
+export const databaseInstanceRowIsMarkedAsStale = () =>
+  basePage.elementIsMarkedStale(layoutTableHostRow(attachedHosts[1].Name));
+
+export const databaseInstanceRowIsMarkedInSync = () =>
+  basePage.elementIsMarkedInSync(layoutTableHostRow(attachedHosts[1].Name));
+
+export const hostRowIsMarkedAsStale = () =>
+  basePage.elementIsMarkedStale(hostsTableHostRow(attachedHosts[1].Name));
+
+export const hostRowIsMarkedInSync = () =>
+  basePage.elementIsMarkedInSync(hostsTableHostRow(attachedHosts[1].Name));
 
 // API
 
@@ -295,3 +364,17 @@ export const restoreFirstAttachedHost = () =>
 
 export const restoreDatabaseInstanceHealth = () =>
   basePage.loadScenario('hana-database-detail-GREEN');
+
+export const markDatabaseAsPresent = () =>
+  basePage.loadScenario(
+    `sap-systems-overview-${selectedDatabase.Sid}-${selectedDatabase.Hosts[1].Instance}-present`
+  );
+
+export const startDatabaseAgentsHeartbeat = () =>
+  basePage.startAgentsHeartbeat(attachedHosts.map((host) => host.AgentId));
+
+export const startDatabaseAgentHeartbeat = () =>
+  basePage.startAgentsHeartbeat([attachedHosts[1].AgentId]);
+
+export const stopDatabaseAgentHeartbeat = () =>
+  basePage.stopAgentsHeartbeat([attachedHosts[1].AgentId]);

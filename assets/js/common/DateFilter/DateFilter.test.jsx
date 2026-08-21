@@ -1,13 +1,12 @@
-import React, { act } from 'react';
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
+import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import { format } from 'date-fns';
+import { DEFAULT_TIMEZONE, parseDateTimeLocalToUtc } from '@lib/timezones';
 import DateFilter from '.';
-
-function as_localtime_str(utc_timestamp) {
-  return format(new Date(utc_timestamp), "yyyy-MM-dd'T'HH:mm:ss");
-}
 
 describe('DateFilter component', () => {
   it('should render with pre-configured options', async () => {
@@ -20,7 +19,7 @@ describe('DateFilter component', () => {
     // Assert that the title is rendered
     expect(screen.getByText(placeholder)).toBeInTheDocument();
 
-    await act(() => user.click(screen.getByText(placeholder)));
+    await user.click(screen.getByText(placeholder));
 
     // Assert that the options are rendered
     ['1h ago', '24h ago', '7d ago', '30d ago'].forEach((label) => {
@@ -34,9 +33,9 @@ describe('DateFilter component', () => {
 
     render(<DateFilter title="by date" prefilled onChange={mockOnChange} />);
 
-    await act(() => user.click(screen.getByText('Filter by date...')));
+    await user.click(screen.getByText('Filter by date...'));
 
-    await act(() => user.click(screen.getByText('24h ago')));
+    await user.click(screen.getByText('24h ago'));
 
     expect(mockOnChange).toHaveBeenCalledWith(['24h ago', expect.any(Date)]);
   });
@@ -81,7 +80,7 @@ describe('DateFilter component', () => {
       />
     );
 
-    await act(() => user.click(screen.getByText('Filter by date...')));
+    await user.click(screen.getByText('Filter by date...'));
 
     expect(screen.getByText('Custom')).toBeInTheDocument();
   });
@@ -105,7 +104,7 @@ describe('DateFilter component', () => {
       />
     );
 
-    await act(() => user.click(screen.getByText('Filter by date...')));
+    await user.click(screen.getByText('Filter by date...'));
 
     expect(screen.queryByText(labelToFind)).not.toBeInTheDocument();
   });
@@ -124,8 +123,8 @@ describe('DateFilter component', () => {
       />
     );
 
-    await act(() => user.click(screen.getByText('Filter by date...')));
-    await act(() => user.click(screen.getByText('my overridden item')));
+    await user.click(screen.getByText('Filter by date...'));
+    await user.click(screen.getByText('my overridden item'));
 
     expect(mockOnChange).toHaveBeenCalledWith(['30d ago', anyDate]);
   });
@@ -133,24 +132,100 @@ describe('DateFilter component', () => {
   it('should select a custom date when typed into the input field', async () => {
     const user = userEvent.setup();
     const mockOnChange = jest.fn();
+    const timezone = DEFAULT_TIMEZONE;
+    const datetime = '2024-08-14T10:21';
     const { container } = render(
-      <DateFilter title="by date" prefilled onChange={mockOnChange} />
+      <DateFilter
+        title="by date"
+        prefilled
+        onChange={mockOnChange}
+        timezone={timezone}
+      />
     );
-    await act(() => user.click(screen.getByText('Filter by date...')));
+    await user.click(screen.getByText('Filter by date...'));
     const input = container.querySelector('input[type="datetime-local"]');
-    await act(() => user.type(input, '2024-08-14T10:21'));
+    await user.click(input);
+    await user.clear(input);
+    await user.type(input, datetime);
 
-    expect(mockOnChange).toHaveBeenCalledWith([
-      'custom',
-      new Date(Date.UTC(2024, 8 - 1, 14, 10, 21)),
-    ]);
+    const expectedDate = parseDateTimeLocalToUtc(datetime, timezone);
+
+    expect(mockOnChange).toHaveBeenCalledWith(['custom', expectedDate]);
+  });
+
+  it('should select a custom date with custom timezone when typed into the input field', async () => {
+    const user = userEvent.setup();
+    const timezone = 'Pacific/Kiritimati';
+    const datetime = '2024-03-31T03:30';
+    const mockOnChange = jest.fn();
+    const { container } = render(
+      <DateFilter
+        title="by date"
+        prefilled
+        onChange={mockOnChange}
+        timezone={timezone}
+      />
+    );
+
+    await user.click(screen.getByText('Filter by date...'));
+    const input = container.querySelector('input[type="datetime-local"]');
+    await user.click(input);
+    await user.clear(input);
+    await user.type(input, datetime);
+
+    const expectedDate = parseDateTimeLocalToUtc(datetime, timezone);
+
+    expect(mockOnChange).toHaveBeenCalledWith(['custom', expectedDate]);
+  });
+
+  it('leaves the custom input empty until focused, then fills the current time so a date-only calendar pick still applies the filter (Firefox)', async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    jest
+      .useFakeTimers()
+      .setSystemTime(new Date('2024-08-14T10:21:00Z').getTime());
+
+    try {
+      const mockOnChange = jest.fn();
+      const { container } = render(
+        <DateFilter
+          title="by date"
+          prefilled
+          onChange={mockOnChange}
+          timezone={DEFAULT_TIMEZONE}
+        />
+      );
+
+      await user.click(screen.getByText('Filter by date...'));
+      const input = container.querySelector('input[type="datetime-local"]');
+
+      // No default selection: the field is empty when the dropdown opens.
+      expect(input.value).toBe('');
+
+      // Focusing the field (before its native calendar opens) fills in the current
+      // time, so the time sub-fields are no longer empty. This is what lets a
+      // date-only pick work in Firefox, whose calendar does not auto-fill the time
+      // (unlike Chrome/Brave).
+      await user.click(input);
+      expect(input.value).toBe('2024-08-14T10:21');
+
+      // Clear and type the new date value so the filter triggers onChange.
+      await user.clear(input);
+      await user.type(input, '2024-08-20T10:21');
+
+      expect(mockOnChange).toHaveBeenCalledWith([
+        'custom',
+        parseDateTimeLocalToUtc('2024-08-20T10:21', DEFAULT_TIMEZONE),
+      ]);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it.each`
-    value                                                     | expected
-    ${new Date(Date.UTC(2024, 8 - 1, 14, 15, 21))}            | ${'08/14/2024 03:21:00 PM'}
-    ${as_localtime_str(Date.UTC(2021, 1 - 1, 24, 5, 50, 23))} | ${'01/24/2021 05:50:23 AM'}
-    ${'2021-01-24T05:50:23.000Z'}                             | ${'01/24/2021 05:50:23 AM'}
+    value                                          | expected
+    ${new Date(Date.UTC(2024, 8 - 1, 14, 15, 21))} | ${'14 Aug 2024, 15:21:00'}
+    ${Date.UTC(2021, 1 - 1, 24, 5, 50, 23)}        | ${'24 Jan 2021, 05:50:23'}
+    ${'2021-01-24T05:50:23.000Z'}                  | ${'24 Jan 2021, 05:50:23'}
   `('should render the custom date ($value)', async ({ value, expected }) => {
     const mockOnChange = jest.fn();
 
@@ -160,6 +235,7 @@ describe('DateFilter component', () => {
         value={['custom', value]}
         prefilled
         onChange={mockOnChange}
+        timezone={DEFAULT_TIMEZONE}
       />
     );
 

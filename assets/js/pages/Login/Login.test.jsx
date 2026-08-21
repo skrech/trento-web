@@ -1,6 +1,8 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 import { screen, waitFor, act } from '@testing-library/react';
-import 'intersection-observer';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 import { Toaster } from 'react-hot-toast';
@@ -45,7 +47,7 @@ describe('Login component', () => {
 
     renderWithRouter(StatefulLogin);
 
-    await waitFor(() => screen.getByText('Invalid credentials'));
+    await screen.findByText('Invalid credentials');
 
     const username = screen.getByTestId(`login-username`);
     expect(username).toHaveClass('border-red-500');

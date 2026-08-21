@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: SUSE LLC
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useSelector, useDispatch } from 'react-redux';
@@ -40,7 +43,7 @@ import { fetchSoftwareUpdates } from '@state/softwareUpdates';
 import {
   getSoftwareUpdatesErrorMessage,
   getSoftwareUpdatesErrorTooltip,
-} from './suseManagerMessaging';
+} from './suseMultiLinuxManagerMessaging';
 import HostDetails from './HostDetails';
 
 const chartsEnabled = getFromConfig('chartsEnabled');
@@ -56,10 +59,10 @@ function HostDetailsPage() {
   const sapInstances = useSelector((state) =>
     getInstancesOnHost(state, hostID)
   );
-  const { abilities } = useSelector(getUserProfile);
+  const { abilities, timezone } = useSelector(getUserProfile);
 
   const lastExecution = useSelector(getLastExecution(hostID));
-  const catalog = useSelector(getCatalog());
+  const catalog = useSelector(getCatalog);
 
   const hostSelectedChecks = useSelector((state) =>
     getHostSelectedChecks(state, hostID)
@@ -131,6 +134,8 @@ function HostDetailsPage() {
       deregistering={host.deregistering}
       exportersStatus={exportersStatus}
       heartbeat={host.heartbeat}
+      staleAt={host.stale_at}
+      health={host.health}
       hostID={host.id}
       hostname={host.hostname}
       ipAddresses={host.ip_addresses}
@@ -152,6 +157,7 @@ function HostDetailsPage() {
       softwareUpdatesErrorMessage={softwareUpdatesErrorMessage}
       softwareUpdatesTooltip={softwareUpdatesTooltip}
       userAbilities={abilities}
+      timezone={timezone}
       operationsEnabled={operationsEnabled}
       runningOperation={runningOperation}
       cleanUpHost={() => {
