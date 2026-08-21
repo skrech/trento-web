@@ -56,8 +56,7 @@ jobs:
           git_committer_email: ${{ steps.import-gpg.outputs.email }}
           pull_title: '${pull_title}'
           github_token: ${{ secrets.TRENTOBOT_GH_PAT }}
-          experimental:
-            conflict_resolution: 'draft_commit_conflicts'
+          experimental: '{"conflict_resolution": "draft_commit_conflicts"}'
 
       - name: Add label to source PR
         if: >-
