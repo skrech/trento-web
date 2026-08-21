@@ -59,8 +59,12 @@ jobs:
           github_token: ${{ secrets.TRENTOBOT_GH_PAT }}
 
       - name: Add label to source PR
+<<<<<<< HEAD
         if: >-
           steps.backport.was_successful
+=======
+        if: fromJSON(steps.backport.outputs.was_successful)
+>>>>>>> cca844b (Really last fix (#9))
         env:
           GH_TOKEN: ${{ secrets.TRENTOBOT_GH_PAT }}
-        run: gh pr edit "${{ github.event.pull_request.number }}" --add-label "released-as-hotfix"
+        run: gh pr edit ${{ github.event.pull_request.number }} --add-label released-as-hotfix
