@@ -21,18 +21,14 @@ on:
     branches: [main]
     types: [closed, labeled]
 
-env:
-  COMMAND_LABEL: 'backport'
-  PROTECT_LABEL: 'released-as-hotfix'
-
 jobs:
   backport:
     name: Backport a pull request
     runs-on: ubuntu-24.04
     if: >
       github.event.pull_request.merged && (
-        (github.event.action == 'closed' && contains(github.event.pull_request.labels.*.name, env.COMMAND_LABEL)) ||
-        (github.event.action == 'labeled' && github.event.label.name == env.COMMAND_LABEL && !contains(github.event.pull_request.labels.*.name, env.PROTECT_LABEL))
+        (github.event.action == 'closed' && contains(github.event.pull_request.labels.*.name, 'backport')) ||
+        (github.event.action == 'labeled' && github.event.label.name == 'backport' && !contains(github.event.pull_request.labels.*.name, 'released-as-hotfix'))
       )
     steps:
       - name: Check out the repository
@@ -54,8 +50,8 @@ jobs:
         with:
           target_branches: 'release'
           # Copy every label except the trigger `backport` one.
-          copy_labels_pattern: '^(?!${{ env.COMMAND_LABEL }}$).*'
-          add_labels: ${{ env.PROTECT_LABEL }}
+          copy_labels_pattern: '^(?!backport$).*'
+          add_labels: 'released-as-hotfix'
           git_committer_name: ${{ steps.import-gpg.outputs.name }}
           git_committer_email: ${{ steps.import-gpg.outputs.email }}
           pull_title: '${pull_title}'
@@ -67,4 +63,4 @@ jobs:
           steps.backport.was_successful
         env:
           GH_TOKEN: ${{ secrets.TRENTOBOT_GH_PAT }}
-        run: gh pr edit "${{ github.event.pull_request.number }}" --add-label "${{ env.PROTECT_LABEL }}"
+        run: gh pr edit "${{ github.event.pull_request.number }}" --add-label "released-as-hotfix"
