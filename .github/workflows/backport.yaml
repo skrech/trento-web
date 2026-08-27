@@ -4,18 +4,6 @@
 ---
 name: Backport PR
 
-# Backport the changes made in an origin PR to the `release` branch of
-# a repository by creating new backport PR. The backported commit is
-# signed.
-#
-# We're reacting on two triggers for executing a backport:
-# 1. Merge a PR that has a label `backport`.
-# 2. Label an already merged PR with `backport` label.
-#
-# System of two labels is used to prevent accidental duplicate
-# backport -- 'backport' is the command label, while
-# `released-as-hotfix` is the protection label.
-
 on:
   pull_request:
     branches: [main]
@@ -24,7 +12,7 @@ on:
 jobs:
   backport:
     name: Backport
-    uses: ./.github/workflows/backport-pr.yaml
+    uses: trento-project/.github/.github/workflows/backport-pr.yaml@backport-action
     secrets:
       gh_token: ${{ secrets.TRENTOBOT_GH_PAT }}
       ssh_key: ${{ secrets.TRENTOBOT_SSH_KEY }}
