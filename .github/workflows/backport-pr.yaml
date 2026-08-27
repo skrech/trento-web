@@ -48,7 +48,6 @@ jobs:
     name: Backport a pull request
     runs-on: ubuntu-24.04
     if: >
-    if: >
       github.event.pull_request.merged && (
         (github.event.action == 'closed' && contains(github.event.pull_request.labels.*.name, 'backport')) ||
         (github.event.action == 'labeled' && github.event.label.name == 'backport' && !contains(github.event.pull_request.labels.*.name, 'released-as-hotfix'))
